@@ -6,4 +6,4 @@ pyinstaller --onefile --noconsole ^
   --add-data "%USERPROFILE%\AppData\Local\ms-playwright;ms-playwright" ^
   browser.py
 
-pyinstaller Combined_code.py
+pyinstaller sync.py

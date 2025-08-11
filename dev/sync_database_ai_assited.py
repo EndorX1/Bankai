@@ -119,10 +119,6 @@ async def download_files(page, Files):
             file_name = await page.evaluate('(e) => e.textContent.trim()', el)
             file_names.append(file_name)
             
-            # Add sync date for new files
-            if file_name not in existing_file_data:
-                existing_file_data[file_name] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            
             # Skip if already downloaded
             if file_name in existing_file_data:
                 print(f"Skipping {file_name} - already downloaded")
@@ -137,6 +133,8 @@ async def download_files(page, Files):
                 download_button = download_button[0]
                 await download_button.click()
                 downloads_started += 1
+                # Mark as downloaded AFTER starting download
+                existing_file_data[file_name] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 await page.waitFor(100)
 
         # Wait for downloads to complete
