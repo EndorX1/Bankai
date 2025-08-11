@@ -1,0 +1,9 @@
+pyinstaller --onefile --console ^
+  --add-binary "C:\Users\eliac\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\spire\doc\lib\Spire.Doc.Base.dll;spire\doc\lib" ^
+  Combined_code.py
+
+pyinstaller --onefile --noconsole ^
+  --add-data "%USERPROFILE%\AppData\Local\ms-playwright;ms-playwright" ^
+  browser.py
+
+pyinstaller Combined_code.py
