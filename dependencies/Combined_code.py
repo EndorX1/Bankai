@@ -2,7 +2,9 @@ import asyncio
 from pyppeteer import launch
 import os
 import sys
-
+import zipfile
+import requests
+import platform
 import json
 from datetime import datetime
 
@@ -16,11 +18,34 @@ chrome_exe = os.path.join(os.getcwd(),'dependencies', 'chromium', 'chrome-win', 
 
 
 async def open_sharepoint():  
+    # Check and download Chromium if needed (Windows only)
+    chromium_dir = os.path.join(os.getcwd(), 'dependencies', 'chromium')
+    chrome_path = os.path.join(chromium_dir, 'chrome-win', 'chrome.exe')
+    
+    if not os.path.exists(chrome_path):
+        print("Downloading Chromium...")
+        os.makedirs(chromium_dir, exist_ok=True)
+        
+        url = "https://www.googleapis.com/download/storage/v1/b/chromium-browser-snapshots/o/Win_x64%2F1000027%2Fchrome-win.zip?alt=media"
+        
+        # Download and extract
+        zip_path = os.path.join(chromium_dir, 'chromium.zip')
+        response = requests.get(url, stream=True)
+        with open(zip_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
+        
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(chromium_dir)
+        os.remove(zip_path)
+        print("Chromium downloaded and extracted!")
+    
     # Launch browser
     browser = await launch(
         headless=False,
         userDataDir=user_data_dir,
-        executablePath=chrome_exe,
+        executablePath=chrome_path,
         args=[
             '--no-sandbox',
             '--disable-setuid-sandbox',
