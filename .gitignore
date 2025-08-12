@@ -25,4 +25,6 @@ dependencies/chromium/*
 
 dependencies/browser_data/*
 
-dev/
+dependencies/sync.spec
+
+dependencies/build

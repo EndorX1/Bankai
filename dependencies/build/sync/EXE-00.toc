@@ -67,7 +67,7 @@
  [],
  False,
  False,
- 1754920893,
+ 1755026680,
  [('run.exe',
    'C:\\Users\\eliac\\Documents\\Obsidian\\Plugins\\.obsidian\\plugins\\Bankai\\dependencies\\venv\\Lib\\site-packages\\PyInstaller\\bootloader\\Windows-64bit-intel\\run.exe',
    'EXECUTABLE')],
