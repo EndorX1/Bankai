@@ -67,7 +67,6 @@ async def open_sharepoint():
     
     await browser.close()
     
-    
 
 
 
@@ -269,6 +268,7 @@ async def main():
     
     print("Database structure saved to database.json")
     await browser.close() 
+
     
 
 if __name__ == "__main__":

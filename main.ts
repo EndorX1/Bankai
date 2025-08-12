@@ -110,23 +110,34 @@ export default class Bankai extends Plugin {
 
 		this.isExeRunning('sync.exe').then((running) => {
 			if (running) {
-				new Notice('Already running');
+				new Notice('Already syncing');
 				return;
+			}
+			if (code === "sync") {
+				new Notice("Started Sync");
+			}
+			else {
+				new Notice("Started Setup");
 			}
 
 			const subprocess = spawn(scriptPath, args);
 
-			subprocess.on('error', (err) => {
-				new Notice(`Failed to start sync: ${String(err)}`);
-			});
+			//subprocess.on('error', (err) => {
+			//	new Notice(`Failed to start sync: ${String(err)}`);
+			//});
 
 			subprocess.stdout.on('data', (data) => {
-				new Notice("Finished Syncing");
+			if (code === "sync") {
+				new Notice("Finished Sync");
+			}
+			else {
+				new Notice("Finished Setup");
+			}
 			});
 
-			subprocess.stderr.on('data', (data) => {
-				new Notice(String(data));
-			});
+			//subprocess.stderr.on('data', (data) => {
+			//	new Notice(String(data));
+			//});
 		});
 	}
 
