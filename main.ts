@@ -121,7 +121,7 @@ export default class Bankai extends Plugin {
 			});
 
 			subprocess.stdout.on('data', (data) => {
-				new Notice(String(data));
+				new Notice("Finished Syncing");
 			});
 
 			subprocess.stderr.on('data', (data) => {
