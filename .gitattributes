@@ -1,3 +1,21 @@
+
+dev/ export-ignore
+
+dependencies/sync.py export-ignore
+
+# Root files (except main.js and manifest.json)
+.editorconfig export-ignore
+.eslintignore export-ignore
+.eslintrc export-ignore
+.npmrc export-ignore
+esbuild.config.mjs export-ignore
+LICENSE export-ignore
+main.ts export-ignore
+package-lock.json export-ignore
+package.json export-ignore
+README.md export-ignore
+tsconfig.json export-ignore
+version-bump.mjs export-ignore
+versions.json export-ignore
 .github/ export-ignore
 .gitattributes export-ignore
-dev/ export-ignore
