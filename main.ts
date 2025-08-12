@@ -104,8 +104,8 @@ export default class Bankai extends Plugin {
 		const vaultBasePath = (this.app.vault.adapter as any).basePath as string; // Desktop only
 		const pluginId = this.manifest.id;
 		const targetDir = path.join(vaultBasePath, this.settings.DownloadDirectory);
-		const pluginPath = path.join(vaultBasePath, '.obsidian', 'plugins', pluginId);
-		const scriptPath = path.join(vaultBasePath, '.obsidian', 'plugins', pluginId, 'dependencies', 'dist', 'sync', 'sync.exe');
+		const pluginPath = path.join(vaultBasePath, '.obsidian', 'Plugins', pluginId);
+		const scriptPath = path.join(vaultBasePath, '.obsidian', 'Plugins', pluginId, 'dependencies', 'dist', 'sync', 'sync.exe');
 		const args = [targetDir, pluginPath, code];
 
 		this.isExeRunning('sync.exe').then((running) => {
@@ -133,7 +133,7 @@ export default class Bankai extends Plugin {
 	resetData() {
 		const vaultBasePath = (this.app.vault.adapter as any).basePath as string;
 		const pluginId = this.manifest.id;
-		const purgePath = path.join(vaultBasePath, '.obsidian', 'plugins', pluginId, 'dependencies', 'browser_data');
+		const purgePath = path.join(vaultBasePath, '.obsidian', 'Plugins', pluginId, 'dependencies', 'browser_data');
 		fs.rmSync(purgePath, { recursive: true, force: true });
 		new Notice('Data reset complete');
 	}
@@ -177,7 +177,7 @@ class TableView extends ItemView {
 	private async loadJsonData(): Promise<Row[]> {
 		const adapter = this.app.vault.adapter;
 		const pluginId = this.plugin.manifest.id;
-		const dataPath = `.obsidian/plugins/${pluginId}/dependencies/database.json`;
+		const dataPath = `.obsidian/Plugins/${pluginId}/dependencies/database.json`;
 		const raw = await adapter.read(dataPath);
 		const json = JSON.parse(raw);
 		return this.extractFiles(json);
