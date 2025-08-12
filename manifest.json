@@ -1,8 +1,8 @@
 {
 	"id": "Bankai",
 	"name": "Bankai",
-	"version": "v1.0.0-beta",
-	"minAppVersion": "v1.0.0-beta",
+	"version": "v1.0.1-beta",
+	"minAppVersion": "v1.0.1-beta",
 	"description": "",
 	"author": "Elia Constam",
 	"isDesktopOnly": true
