@@ -7,10 +7,16 @@ import requests
 import platform
 import json
 from datetime import datetime
+from spire.doc import Document, FileFormat
+
 
 DatabasePath = sys.argv[1]
 PluginPath = sys.argv[2]
 selectedCode = sys.argv[3]
+
+#DatabasePath = r"C:\Users\eliac\Documents\Obsidian\Plugins\Database"
+#PluginPath = r"C:\Users\eliac\Documents\Obsidian\Plugins\.obsidian\plugins\Bankai"
+#selectedCode = "sync"
 
 user_data_dir = os.path.join(PluginPath,'dependencies', 'browser_data')
 os.makedirs(user_data_dir, exist_ok=True)
@@ -148,7 +154,7 @@ async def download_files(page, Files):
     })
 
     downloads_started = 0
-    file_names = []
+    downloaded_files = []
     
     # Check existing files in database
     current_dict = structure
@@ -159,10 +165,9 @@ async def download_files(page, Files):
     existing_file_data = current_dict.get('__FileData__', {})
     
     if Files:
-        # Get file names and check if already downloaded
+        # Start downloads
         for el in Files:
             file_name = await page.evaluate('(e) => e.textContent.trim()', el)
-            file_names.append(file_name)
             
             # Skip if already downloaded
             if file_name in existing_file_data:
@@ -178,16 +183,38 @@ async def download_files(page, Files):
                 download_button = download_button[0]
                 await download_button.click()
                 downloads_started += 1
-                # Mark as downloaded AFTER starting download
+                downloaded_files.append(file_name)
                 existing_file_data[file_name] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 await page.waitFor(100)
 
-        # Wait for downloads to complete
+        # Monitor downloads and convert as they complete
         if downloads_started > 0:
+            converted_files = set()
             for _ in range(60):
                 entries = os.listdir(folder_path)
                 in_progress = [f for f in entries if f.endswith('.crdownload')]
                 completed = [f for f in entries if not f.endswith('.crdownload')]
+                
+                # Convert completed Word docs immediately
+                for file_name in downloaded_files:
+                    if file_name in completed and file_name not in converted_files:
+                        if file_name.endswith('.docx') or file_name.endswith('.doc'):
+                            doc_name = file_name.rsplit('.', 1)[0] + '.pdf'
+                            file_path = os.path.join(folder_path, file_name)
+                            doc_path = os.path.join(folder_path, doc_name)
+                            
+                            try:
+                                doc = Document()
+                                doc.LoadFromFile(file_path)
+                                doc.SaveToFile(doc_path, FileFormat.PDF)
+                                doc.Close()
+                                existing_file_data[doc_name] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                                print(f"Converted {file_name} to {doc_name}")
+                                converted_files.add(file_name)
+                            except Exception as e:
+                                print(f"Failed to convert {file_name}: {e}")
+                
+                # Check if all downloads complete
                 if len(completed) >= downloads_started and not in_progress:
                     break
                 await asyncio.sleep(1)

@@ -55,10 +55,6 @@ export default class Bankai extends Plugin {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 	}
 
-	private async saveSettings() {
-		await this.saveData(this.settings);
-	}
-
 	private async isExeRunning(exeName: string): Promise<boolean> {
 		return new Promise((resolve) => {
 			exec('tasklist', (err, stdout) => {
@@ -122,13 +118,13 @@ export default class Bankai extends Plugin {
 
 			const subprocess = spawn(scriptPath, args);
 
-			//subprocess.on('error', (err) => {
-			//	new Notice(`Failed to start sync: ${String(err)}`);
-			//});
+			subprocess.on('error', (err) => {
+				new Notice(`Failed to start sync: ${String(err)}`);
+			});
 
 			subprocess.stdout.on('data', (data) => {
 			if (code === "sync") {
-				new Notice("Finished Sync");
+				new Notice(String(data));
 			}
 			else {
 				new Notice("Finished Setup");

@@ -1,17 +1,6 @@
-import json
+file_name = "adasd.docx"
 
-with open(r'C:\Users\eliac\Documents\Obsidian\Plugins\.obsidian\plugins\Bankai\dependencies\subjects.json', 'r', encoding='utf-8') as f:
-    subData = json.load(f)
+if file_name.endswith('.docx') or file_name.endswith('.doc'):
+                doc_name = file_name.rsplit('.', 1)[0] + '.pdf'
                 
-print(subData)
-
-pages = []
-for page in subData:
-    pages.append(subData[page])
-
-Subjects = []
-for subject in subData:
-    Subjects.append(subject)
-    
-print(Subjects)
-print(pages)
+print(doc_name)
