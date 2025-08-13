@@ -124,7 +124,7 @@ export default class Bankai extends Plugin {
 
 			subprocess.stdout.on('data', (data) => {
 			if (code === "sync") {
-				new Notice(String(data));
+				new Notice("Finished Sync");
 			}
 			else {
 				new Notice("Finished Setup");
