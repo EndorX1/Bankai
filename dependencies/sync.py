@@ -28,10 +28,10 @@ async def open_sharepoint():
     # Check and download Chromium if needed (Windows only)
     chromium_dir = os.path.join(PluginPath, 'dependencies', 'chromium')
     chrome_path = os.path.join(chromium_dir, 'chrome-win', 'chrome.exe')
-    print(chrome_path)
+    #print(chrome_path)
     
     if not os.path.exists(chrome_path):
-        print("Downloading Chromium...")
+        #print("Downloading Chromium...")
         os.makedirs(chromium_dir, exist_ok=True)
         
         url = "https://www.googleapis.com/download/storage/v1/b/chromium-browser-snapshots/o/Win_x64%2F1000027%2Fchrome-win.zip?alt=media"
@@ -47,7 +47,7 @@ async def open_sharepoint():
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             zip_ref.extractall(chromium_dir)
         os.remove(zip_path)
-        print("Chromium downloaded and extracted!")
+        #print("Chromium downloaded and extracted!")
     
     # Launch browser
     browser = await launch(
@@ -67,8 +67,8 @@ async def open_sharepoint():
     await page.goto('https://eduzh.sharepoint.com/teams/2120AAD-365-M-COU-EBI2120-G24If007/Freigegebene%20Dokumente/Forms/AllItems.aspx?id=%2Fteams%2F2120AAD%2D365%2DM%2DCOU%2DEBI2120%2DG24If007%2FFreigegebene%20Dokumente%2FGeneral&viewid=ebe2067a%2D413b%2D4e41%2Dabd1%2Dedef0c0cbc14')
     
     # Keep browser open for manual login
-    print("Browser opened. Please log in manually.")
-    print("You got 5 minutes")
+    #print("Browser opened. Please log in manually.")
+    #print("You got 5 minutes")
     await page.waitForSelector('[data-id="heroField"]', timeout=300000)
     
     await browser.close()
@@ -102,7 +102,7 @@ async def open_browser():
     page = await browser.newPage()
     await page.setViewport({'width': 1920, 'height': 1080})
     
-    print("Browser opened.")
+    #print("Browser opened.")
     
     return browser, page
 
@@ -112,7 +112,7 @@ async def goto_page(page, url):
     try:
         await page.waitForSelector('[data-id="heroField"]', timeout=30000)
     except:
-        print("Error: Timeout while waiting for page to load")
+        #print("Error: Timeout while waiting for page to load")
         return
     
     
@@ -123,7 +123,7 @@ async def get_elements(page):
     
     elements = await page.querySelectorAll('[data-id="heroField"]')
     
-    print(f"Found {len(elements)} elements")
+    #print(f"Found {len(elements)} elements")
     
     return await assign_elements(page, elements)
     
@@ -138,7 +138,7 @@ async def assign_elements(page, elements):
         else:
             Files.append(el)
        
-    print(f"Found {len(Folders)} folders and {len(Files)} files")
+    #print(f"Found {len(Folders)} folders and {len(Files)} files")
     
     return Folders, Files
     
@@ -171,7 +171,7 @@ async def download_files(page, Files):
             
             # Skip if already downloaded
             if file_name in existing_file_data:
-                print(f"Skipping {file_name} - already downloaded")
+                #print(f"Skipping {file_name} - already downloaded")
                 continue
             
             await el.executionContext.evaluate('element => element.scrollIntoViewIfNeeded()', el)
@@ -209,22 +209,24 @@ async def download_files(page, Files):
                                 doc.SaveToFile(doc_path, FileFormat.PDF)
                                 doc.Close()
                                 existing_file_data[doc_name] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                                print(f"Converted {file_name} to {doc_name}")
+                                #print(f"Converted {file_name} to {doc_name}")
                                 converted_files.add(file_name)
                             except Exception as e:
-                                print(f"Failed to convert {file_name}: {e}")
+                                #print(f"Failed to convert {file_name}: {e}")
+                                pass
                 
                 # Check if all downloads complete
                 if len(completed) >= downloads_started and not in_progress:
                     break
                 await asyncio.sleep(1)
             else:
-                print("Timeout Error while Downloading. Rest of Files will be Downloaded next Time")
+                #print("Timeout Error while Downloading. Rest of Files will be Downloaded next Time")
+                pass
     
     # Update files in structure
     current_dict['__FileData__'] = existing_file_data
     
-    print(f"All {downloads_started} downloads completed!")
+    #print(f"All {downloads_started} downloads completed!")
     return
 
 async def update_database(page):
@@ -257,7 +259,7 @@ async def update_database(page):
             if len(refreshed_Folders) >= len(Folders):
                 Folders = refreshed_Folders
             else:
-                print("Danger someone deleted a Folder mid Sync")
+                #print("Danger someone deleted a Folder mid Sync")
                 break
         
         await page.waitFor(500)
@@ -293,7 +295,7 @@ async def main():
     with open(dataPath, 'w', encoding='utf-8') as f:
         json.dump(structure, f, indent=2, ensure_ascii=False)
     
-    print("Database structure saved to database.json")
+    #print("Database structure saved to database.json")
     await browser.close() 
 
     
