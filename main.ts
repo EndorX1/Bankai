@@ -100,8 +100,8 @@ export default class Bankai extends Plugin {
 		const vaultBasePath = (this.app.vault.adapter as any).basePath as string; // Desktop only
 		const pluginId = this.manifest.id;
 		const targetDir = path.join(vaultBasePath, this.settings.DownloadDirectory);
-		const pluginPath = path.join(vaultBasePath, '.obsidian', 'Plugins', pluginId);
-		const scriptPath = path.join(vaultBasePath, '.obsidian', 'Plugins', pluginId, 'dependencies', 'dist', 'sync', 'sync.exe');
+		const pluginPath = path.join(vaultBasePath, '.obsidian', 'plugins', pluginId);
+		const scriptPath = path.join(vaultBasePath, '.obsidian', 'plugins', pluginId, 'dependencies', 'dist', 'sync', 'sync.exe');
 		const args = [targetDir, pluginPath, code];
 
 		this.isExeRunning('sync.exe').then((running) => {
@@ -118,9 +118,9 @@ export default class Bankai extends Plugin {
 
 			const subprocess = spawn(scriptPath, args);
 
-			subprocess.on('error', (err) => {
-				new Notice(`Failed to start sync: ${String(err)}`);
-			});
+			//subprocess.on('error', (err) => {
+			//	new Notice(`Failed to start sync: ${String(err)}`);
+			//});
 
 			subprocess.stdout.on('data', (data) => {
 			if (code === "sync") {
@@ -140,7 +140,7 @@ export default class Bankai extends Plugin {
 	resetData() {
 		const vaultBasePath = (this.app.vault.adapter as any).basePath as string;
 		const pluginId = this.manifest.id;
-		const purgePath = path.join(vaultBasePath, '.obsidian', 'Plugins', pluginId, 'dependencies', 'browser_data');
+		const purgePath = path.join(vaultBasePath, '.obsidian', 'plugins', pluginId, 'dependencies', 'browser_data');
 		fs.rmSync(purgePath, { recursive: true, force: true });
 		new Notice('Data reset complete');
 	}
