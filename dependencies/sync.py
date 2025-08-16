@@ -13,6 +13,7 @@ from spire.doc import Document, FileFormat
 DatabasePath = sys.argv[1]
 PluginPath = sys.argv[2]
 selectedCode = sys.argv[3]
+SubjectPrioritization = sys.argv[4]
 
 #DatabasePath = r"C:\Users\eliac\Documents\Obsidian\Plugins\Database"
 #PluginPath = r"C:\Users\eliac\Documents\Obsidian\Plugins\.obsidian\plugins\Bankai"
@@ -272,31 +273,57 @@ async def update_database(page):
 
 async def main():
     
-    
     browser, page = await open_browser()
-    for i in range(len(pages)):
-        subject_name = Subjects[i]
-        
-        # Initialize subject in structure
-        if subject_name not in structure:
-            structure[subject_name] = {}
-        
-        # Set current path to subject
-        current_path.clear()
-        current_path.append(subject_name)
-        
-        await goto_page(page, pages[i])
-        await update_database(page)
-        
-        # Clear path after processing subject
-        current_path.clear()
-        
-    structure["SyncTime"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
-    # Save structure to JSON
-    with open(dataPath, 'w', encoding='utf-8') as f:
-        json.dump(structure, f, indent=2, ensure_ascii=False)
+    if SubjectPrioritization == "":
     
+        for i in range(len(pages)):
+            subject_name = Subjects[i]
+            
+            # Initialize subject in structure
+            if subject_name not in structure:
+                structure[subject_name] = {}
+            
+            # Set current path to subject
+            current_path.clear()
+            current_path.append(subject_name)
+            
+            await goto_page(page, pages[i])
+            await update_database(page)
+            
+            # Clear path after processing subject
+            current_path.clear()
+            
+            # Update sync time and save structure to JSON after each subject
+            structure["SyncTime"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            with open(dataPath, 'w', encoding='utf-8') as f:
+                json.dump(structure, f, indent=2, ensure_ascii=False)
+        else:
+            subject_name = SubjectPrioritization
+            
+                        # Initialize subject in structure
+            if subject_name not in structure:
+                structure[subject_name] = {}
+            
+            # Set current path to subject
+            current_path.clear()
+            current_path.append(subject_name)
+            
+            for i in range(len(Subjects)):
+                if Subjects[i] == subject_name:
+                    n = i
+            
+            await goto_page(page, pages[n])
+            await update_database(page)
+            
+            # Clear path after processing subject
+            current_path.clear()
+            
+            # Update sync time and save structure to JSON after each subject
+            structure["SyncTime"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            with open(dataPath, 'w', encoding='utf-8') as f:
+                json.dump(structure, f, indent=2, ensure_ascii=False)
+            
     #print("Database structure saved to database.json")
     await browser.close() 
 
@@ -329,7 +356,7 @@ if __name__ == "__main__":
         Subjects = []
         for subject in subData:
             Subjects.append(subject)
-
+        
         
         asyncio.run(main())
     elif selectedCode == "setup":
