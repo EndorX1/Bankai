@@ -1,17 +1,245 @@
 {
   "Deutsch": {
-    "__FileData__": {
-      "File" : "2009-09-23 23-15-12"
+    "__FileData__": {},
+    "Orthografie": {
+      "__FileData__": {
+        "Getrennt- und Zusammenschreibung.docx": "2025-08-16 12:06:59",
+        "Großschreibung.docx": "2025-08-16 12:07:00",
+        "Getrennt- und Zusammenschreibung.pdf": "2025-08-16 12:07:05",
+        "Großschreibung.pdf": "2025-08-16 12:07:07"
+      },
+      "Orthografie Aufgaben": {
+        "__FileData__": {
+          "Aufgaben - Fremdwörter.pdf": "2025-08-16 12:07:10",
+          "Getrennt- und Zusammenschreibung + Lsg.pdf": "2025-08-16 12:07:10",
+          "Getrennt-und Zusammenschreibung.docx": "2025-08-16 12:07:11",
+          "präpositionenAufgaben.pdf": "2025-08-16 12:07:12",
+          "übungen-grossschreibung.odt": "2025-08-16 12:07:12",
+          "Worttrennung Aufgaben Lösungen.docx": "2025-08-16 12:07:13",
+          "Worttrennung Aufgaben.docx": "2025-08-16 12:07:14",
+          "Getrennt-und Zusammenschreibung.pdf": "2025-08-16 12:07:14",
+          "Worttrennung Aufgaben Lösungen.pdf": "2025-08-16 12:07:14",
+          "Worttrennung Aufgaben.pdf": "2025-08-16 12:07:16"
+        }
+      }
     }
   },
   "Informatik": {
-    "__FileData__": {}
+    "__FileData__": {},
+    "24HS": {
+      "__FileData__": {
+        "23fsInfoSkript20240820.pdf": "2025-08-16 12:07:28",
+        "23hs1bfhZusatzblatt01Heron.pdf": "2025-08-16 12:07:29",
+        "24hs1fgrASCIITabelle.pdf": "2025-08-16 12:07:30",
+        "24hs1fgrProgramme20240827.zip": "2025-08-16 12:07:31",
+        "24hs1fgrProgramme20240927.zip": "2025-08-16 12:07:32",
+        "24hs1fgrProgramme20241001.zip": "2025-08-16 12:07:33",
+        "24hs1fgrProgramme20241106.zip": "2025-08-16 12:07:33",
+        "24hs1fgrProgramme20241111.zip": "2025-08-16 12:07:34",
+        "24hs1fgrProgramme20241119.zip": "2025-08-16 12:07:35",
+        "24hs1fgrProgramme20241120.zip": "2025-08-16 12:07:36",
+        "24hs1fgrProgramme20241126.zip": "2025-08-16 12:07:37",
+        "24hs1fgrProgramme20241127.zip": "2025-08-16 12:07:38",
+        "24hs1fgrProgramme20250119.zip": "2025-08-16 12:07:39",
+        "24hs1fgrSemesterinformation.pdf": "2025-08-16 12:07:39",
+        "24hsInfoSkript20240828.pdf": "2025-08-16 12:07:40",
+        "24hsInfoSkript20240916.pdf": "2025-08-16 12:07:41",
+        "24hsInfoSkript20240924.pdf": "2025-08-16 12:07:42",
+        "24hsInfoSkript20240926.pdf": "2025-08-16 12:07:43",
+        "24hsInfoSkript20241001.pdf": "2025-08-16 12:07:44",
+        "24hsInfoSkript20241027.pdf": "2025-08-16 12:07:44",
+        "24hsInfoSkript20241104.pdf": "2025-08-16 12:07:45",
+        "24hsInfoSkript20241105.pdf": "2025-08-16 12:07:46",
+        "24hsInfoSkript20241111.pdf": "2025-08-16 12:07:47",
+        "24hsInfoSkript20241119.pdf": "2025-08-16 12:07:48",
+        "24hsInfoSkript20241120.pdf": "2025-08-16 12:07:49",
+        "24hsInfoSkript20241126.pdf": "2025-08-16 12:07:50",
+        "24hsInfoSkript20241127.pdf": "2025-08-16 12:07:51",
+        "24hsInfoSkript20250106.pdf": "2025-08-16 12:07:51",
+        "24hsInfoSkript20250115.pdf": "2025-08-16 12:07:52",
+        "24hsInfoSkript20250119.pdf": "2025-08-16 12:07:53",
+        "ch04aufg25PokerbewertungVorl.py": "2025-08-16 12:07:54",
+        "mar95.pdf": "2025-08-16 12:07:55"
+      },
+      "Richtlinien": {
+        "__FileData__": {
+          "Nutzung von IT-Diensten (Version SuS).pdf": "2025-08-16 12:08:58",
+          "Präsentation Einführung BYOD.pptx": "2025-08-16 12:08:59",
+          "Wegleitung_Digitale_Arbeitsgeraete.pdf": "2025-08-16 12:09:00",
+          "Wegleitung_Digitale_Kommunikation.pdf": "2025-08-16 12:09:00"
+        }
+      }
+    },
+    "25FS": {
+      "__FileData__": {
+        "25fs1fgrPraesListenFin.pdf": "2025-08-16 12:09:09",
+        "25fs1fgrProgramme20250312.zip": "2025-08-16 12:09:10",
+        "25fs1fgrProgramme20250324.zip": "2025-08-16 12:09:11",
+        "25fs1fgrProgramme20250327.zip": "2025-08-16 12:09:12",
+        "25fs1fgrProgramme20250406.zip": "2025-08-16 12:09:13",
+        "25fs1fgrProgramme20250507.zip": "2025-08-16 12:09:14",
+        "25fs1fgrProgramme20250512.zip": "2025-08-16 12:09:14",
+        "25fs1fgrProgramme20250520.zip": "2025-08-16 12:09:15",
+        "25fs1fgrProgramme20250601.zip": "2025-08-16 12:09:16",
+        "25fs1fgrProgramme20250615.zip": "2025-08-16 12:09:17",
+        "25fs1fgrProgramme20250629.zip": "2025-08-16 12:09:18",
+        "25fsInfoSkript20250310.pdf": "2025-08-16 12:09:19",
+        "25fsInfoSkript20250312.pdf": "2025-08-16 12:09:20",
+        "25fsInfoSkript20250314.pdf": "2025-08-16 12:09:20",
+        "25fsInfoSkript20250321.pdf": "2025-08-16 12:09:21",
+        "25fsInfoSkript20250324.pdf": "2025-08-16 12:09:22",
+        "25fsInfoSkript20250406.pdf": "2025-08-16 12:09:23",
+        "25fsInfoSkript20250406Ch08.pdf": "2025-08-16 12:09:24",
+        "25fsInfoSkript20250411.pdf": "2025-08-16 12:09:25",
+        "25fsInfoSkript20250411Ch09.pdf": "2025-08-16 12:09:26",
+        "25fsInfoSkript20250505.pdf": "2025-08-16 12:09:27",
+        "25fsInfoSkript20250505Ch08.pdf": "2025-08-16 12:09:27",
+        "25fsInfoSkript20250505Ch09.pdf": "2025-08-16 12:09:28",
+        "25fsInfoSkript20250512Ch08.pdf": "2025-08-16 12:09:29",
+        "25fsInfoSkript20250512Ch09.pdf": "2025-08-16 12:09:30",
+        "25fsInfoSkript20250520.pdf": "2025-08-16 12:09:31",
+        "25fsInfoSkript20250520Ch08.pdf": "2025-08-16 12:09:32",
+        "25fsInfoSkript20250520Ch09.pdf": "2025-08-16 12:09:33",
+        "25fsInfoSkript20250526.pdf": "2025-08-16 12:09:34",
+        "25fsInfoSkript20250526Ch09.pdf": "2025-08-16 12:09:35",
+        "25fsInfoSkript20250526Ch10.pdf": "2025-08-16 12:09:36",
+        "25fsInfoSkript20250601.pdf": "2025-08-16 12:09:36",
+        "25fsInfoSkript20250601Ch10.pdf": "2025-08-16 12:09:37",
+        "25fsInfoSkript20250615.pdf": "2025-08-16 12:09:38",
+        "25fsInfoSkript20250615Ch09.pdf": "2025-08-16 12:09:39",
+        "25fsInfoSkript20250615Ch10.pdf": "2025-08-16 12:09:40",
+        "25fsInfoSkript20250629.pdf": "2025-08-16 12:09:41",
+        "25fsInfoSkript20250629Ch09.pdf": "2025-08-16 12:09:42",
+        "ch08aufg09PollenSuchenSortierenVorlage.py": "2025-08-16 12:09:43"
+      },
+      "Algorithmik": {
+        "__FileData__": {}
+      }
+    }
   },
   "English": {
-    "__FileData__": {}
+    "__FileData__": {
+      "Screenshot 2025-04-17 at 19.22.07.png": "2025-08-16 12:10:48",
+      "U.S. election 2024.docx": "2025-08-16 12:10:48"
+    },
+    "CLIMATE WEEK": {
+      "__FileData__": {
+        "Noah's Ark.pdf": "2025-08-16 12:10:53"
+      }
+    },
+    "ENGLISH FILE": {
+      "__FileData__": {},
+      "FILE 1": {
+        "__FileData__": {
+          "Additional words (1).pdf": "2025-08-16 12:11:01",
+          "Grammar revision (1).pdf": "2025-08-16 12:11:02",
+          "Individual work (1).pdf": "2025-08-16 12:11:03",
+          "Online practice File 1.pdf": "2025-08-16 12:11:03",
+          "Practice future forms (1).pdf": "2025-08-16 12:11:04",
+          "Practice present tense (1).pdf": "2025-08-16 12:11:04"
+        }
+      },
+      "FILE 2": {
+        "__FileData__": {
+          "Additional words (2).pdf": "2025-08-16 12:11:10",
+          "Polar challenge.pdf": "2025-08-16 12:11:10",
+          "PP simple and cont, for +  since.pdf": "2025-08-16 12:11:11",
+          "Present perfect or simple past (2).pdf": "2025-08-16 12:11:11",
+          "Strong adjectives p. 173.jpg": "2025-08-16 12:11:12"
+        }
+      },
+      "FILE 3": {
+        "__FileData__": {
+          "Additional words (3).pdf": "2025-08-16 12:11:18"
+        }
+      },
+      "FILE 4": {
+        "__FileData__": {
+          "A disastrous holiday.pdf": "2025-08-16 12:11:24",
+          "Learning a new skill (4).pdf": "2025-08-16 12:11:25",
+          "Reflexives (4).pdf": "2025-08-16 12:11:25",
+          "Revision modals (4).pdf": "2025-08-16 12:11:26"
+        }
+      },
+      "FILE 5": {
+        "__FileData__": {
+          "Additional words (5).pdf": "2025-08-16 12:11:32",
+          "Postcard (5).docx": "2025-08-16 12:11:32"
+        }
+      },
+      "FILE 6": {
+        "__FileData__": {
+          "Formation Passive (6)1.pdf": "2025-08-16 12:11:38",
+          "Modal verbs of deduction (6).pdf": "2025-08-16 12:11:39",
+          "Transformation Active-Passive A (6).pdf": "2025-08-16 12:11:40"
+        }
+      },
+      "FILE 7": {
+        "__FileData__": {
+          "Additional Terms British Schools (7).pdf": "2025-08-16 12:11:45",
+          "Grammar Revision (7).pdf": "2025-08-16 12:11:45"
+        }
+      },
+      "PHONETIC NOTATION": {
+        "__FileData__": {
+          "Consonants.pdf": "2025-08-16 12:11:51",
+          "Exercises consonants.pdf": "2025-08-16 12:11:52",
+          "Place names.pdf": "2025-08-16 12:11:52",
+          "Practice test.pdf": "2025-08-16 12:11:53",
+          "Pronunciation endings.pdf": "2025-08-16 12:11:54",
+          "Vowels and diphthongs.pdf": "2025-08-16 12:11:54"
+        }
+      }
+    },
+    "LITERATURE": {
+      "__FileData__": {},
+      "Holding": {
+        "__FileData__": {
+          "HW.docx": "2025-08-16 12:12:04",
+          "HW.pdf": "2025-08-16 12:12:05"
+        }
+      },
+      "OF MICE AND MEN": {
+        "__FileData__": {
+          "Biography John Steinbeck.pdf": "2025-08-16 12:12:10",
+          "HW - 46.pdf": "2025-08-16 12:12:10",
+          "Reading schedule.doc": "2025-08-16 12:12:11",
+          "Reading schedule.pdf": "2025-08-16 12:12:11"
+        }
+      },
+      "THE GIVER": {
+        "__FileData__": {
+          "HW - 117.pdf": "2025-08-16 12:12:16",
+          "HW - 37.pdf": "2025-08-16 12:12:17",
+          "HW - 60.pdf": "2025-08-16 12:12:17",
+          "HW - 86.pdf": "2025-08-16 12:12:18",
+          "HW - p. 136.pdf": "2025-08-16 12:12:19",
+          "Reading schedule.pdf": "2025-08-16 12:12:19"
+        }
+      },
+      "WHERE THINGS COME BACK": {
+        "__FileData__": {
+          "HW pp. 189 - 228.pdf": "2025-08-16 12:12:24",
+          "HW pp. 44 - 82.pdf": "2025-08-16 12:12:25",
+          "Where Things.pdf": "2025-08-16 12:12:25"
+        }
+      }
+    },
+    "TESTS": {
+      "__FileData__": {}
+    }
   },
   "Biologie": {
-    "__FileData__": {}
+    "__FileData__": {},
+    "1. Einführung Biologie": {
+      "__FileData__": {}
+    },
+    "3. Fortpflanzung": {
+      "__FileData__": {}
+    },
+    "General": {
+      "__FileData__": {}
+    }
   },
-  "SyncTime" : "2009-09-23 23-15-12"
+  "SyncTime": "2025-08-16 12:21:36"
 }
