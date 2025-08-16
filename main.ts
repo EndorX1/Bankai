@@ -27,6 +27,8 @@ type Row = Record<typeof COL_NAME | typeof COL_SUBJECT | typeof COL_FOLDER | typ
 export default class Bankai extends Plugin {
 	settings!: PluginSettings;
 	private intervalId: number | null = null;
+	private buttonUpdateIntervalId: number | null = null;
+
 
 	async onload() {
 		await this.loadSettings();
@@ -42,6 +44,7 @@ export default class Bankai extends Plugin {
 		this.addSettingTab(new BankaiSettingTab(this.app, this));
 
 		this.startInterval(this.settings.DownloadInterval);
+		this.startButtonUpdateInterval();
 	}
 
 	onunload() {
@@ -49,13 +52,17 @@ export default class Bankai extends Plugin {
 			window.clearInterval(this.intervalId);
 			this.intervalId = null;
 		}
+		if (this.buttonUpdateIntervalId !== null) {
+			window.clearInterval(this.buttonUpdateIntervalId);
+			this.buttonUpdateIntervalId = null;
+		}
 	}
 
 	private async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 	}
 
-	private async isExeRunning(exeName: string): Promise<boolean> {
+	async isExeRunning(exeName: string): Promise<boolean> {
 		return new Promise((resolve) => {
 			exec('tasklist', (err, stdout) => {
 				if (err) {
@@ -97,18 +104,21 @@ export default class Bankai extends Plugin {
 	}
 
 	SyncDatabase(code: string, SubjectPrioritization: string = "") {
-		const vaultBasePath = (this.app.vault.adapter as any).basePath as string; // Desktop only
-		const pluginId = this.manifest.id;
-		const targetDir = path.join(vaultBasePath, this.settings.DownloadDirectory);
-		const pluginPath = path.join(vaultBasePath, '.obsidian', 'plugins', pluginId);
-		const scriptPath = path.join(vaultBasePath, '.obsidian', 'plugins', pluginId, 'dependencies', 'dist', 'sync', 'sync.exe');
-		const args = [targetDir, pluginPath, code, SubjectPrioritization];
-
 		this.isExeRunning('sync.exe').then((running) => {
 			if (running) {
 				new Notice('Already syncing');
 				return;
 			}
+			
+			this.updateSyncButtons();
+			
+			const vaultBasePath = (this.app.vault.adapter as any).basePath as string;
+			const pluginId = this.manifest.id;
+			const targetDir = path.join(vaultBasePath, this.settings.DownloadDirectory);
+			const pluginPath = path.join(vaultBasePath, '.obsidian', 'plugins', pluginId);
+			const scriptPath = path.join(vaultBasePath, '.obsidian', 'plugins', pluginId, 'dependencies', 'dist', 'sync', 'sync.exe');
+			const args = [targetDir, pluginPath, code, SubjectPrioritization];
+			
 			if (code === "sync") {
 				new Notice("Started Sync");
 				this.startInterval(this.settings.DownloadInterval);
@@ -120,25 +130,39 @@ export default class Bankai extends Plugin {
 
 			const subprocess = spawn(scriptPath, args);
 
-			//subprocess.on('error', (err) => {
-			//	new Notice(`Failed to start sync: ${String(err)}`);
-			//});
-
 			subprocess.stdout.on('data', (data) => {
-			if (code === "sync") {
-				new Notice("Finished Sync");
-				this.reloadTableView();
-				this.startInterval(this.settings.DownloadInterval);
-			}
-			else {
-				new Notice("Finished Setup");
-				this.startInterval(this.settings.DownloadInterval);
-			}
+				this.updateSyncButtons();
+				
+				if (code === "sync") {
+					new Notice("Finished Sync");
+					this.reloadTableView();
+					this.startInterval(this.settings.DownloadInterval);
+				}
+				else {
+					new Notice("Finished Setup");
+					this.startInterval(this.settings.DownloadInterval);
+				}
 			});
+		});
+	}
 
-			//subprocess.stderr.on('data', (data) => {
-			//	new Notice(String(data));
-			//});
+	private startButtonUpdateInterval() {
+		if (this.buttonUpdateIntervalId !== null) {
+			window.clearInterval(this.buttonUpdateIntervalId);
+		}
+		this.buttonUpdateIntervalId = window.setInterval(() => this.updateSyncButtons(), 10000);
+		this.registerInterval(this.buttonUpdateIntervalId);
+	}
+
+	private updateSyncButtons() {
+		this.isExeRunning('sync.exe').then((running) => {
+			const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_TABLE);
+			leaves.forEach(leaf => {
+				const view = leaf.view as TableView;
+				if (view && view.updateSyncButton) {
+					view.updateSyncButton(running);
+				}
+			});
 		});
 	}
 
@@ -183,6 +207,7 @@ class TableView extends ItemView {
 	private allData: Row[] = [];
 	private filteredData: Row[] = [];
 	private syncTime: string = '';
+	private syncButton: HTMLButtonElement | null = null;
 
 	constructor(leaf: WorkspaceLeaf, plugin: Bankai) {
 		super(leaf);
@@ -219,7 +244,21 @@ class TableView extends ItemView {
 			rightDiv.style.alignItems = 'center';
 			rightDiv.style.gap = '15px';
 			
-			const syncBtn = rightDiv.createEl('button', { text: 'Sync' });
+			const syncContainer = rightDiv.createEl('div');
+			syncContainer.style.display = 'flex';
+			syncContainer.style.alignItems = 'center';
+			syncContainer.style.gap = '8px';
+			
+			const spinner = syncContainer.createEl('div');
+			spinner.className = 'loader';
+			spinner.style.display = 'none';
+			spinner.style.fontSize = '12px';
+			spinner.style.width = '1em';
+			spinner.style.height = '1em';
+			
+			const syncBtn = syncContainer.createEl('button', { text: 'Sync' });
+			this.syncButton = syncBtn;
+			this.syncButton.setAttribute('data-spinner', spinner.outerHTML);
 			syncBtn.style.padding = '6px 12px';
 			syncBtn.style.backgroundColor = 'var(--interactive-accent)';
 			syncBtn.style.color = 'var(--text-on-accent)';
@@ -233,6 +272,11 @@ class TableView extends ItemView {
 			});
 			syncBtn.addEventListener('mouseleave', () => {
 				syncBtn.style.backgroundColor = 'var(--interactive-accent)';
+			});
+			
+			// Update button state based on current sync status
+			this.plugin.isExeRunning('sync.exe').then((running) => {
+				this.updateSyncButton(running);
 			});
 			
 			const reloadBtn = rightDiv.createEl('button', { text: 'Reload' });
@@ -299,7 +343,9 @@ class TableView extends ItemView {
 		};
 
 		for (const subject in data) {
-			traverse(data[subject], subject, subject);
+			if (subject !== 'SyncTime') {
+				traverse(data[subject], subject, subject);
+			}
 		}
 
 		return files;
@@ -460,6 +506,55 @@ class TableView extends ItemView {
 		container.appendChild(table);
 	}
 
+	updateSyncButton(isLoading: boolean) {
+		if (!this.syncButton) return;
+		
+		const spinner = this.syncButton.parentElement?.querySelector('.loader') as HTMLElement;
+		if (!spinner) return;
+		
+		if (isLoading) {
+			this.syncButton.textContent = 'Syncing...';
+			this.syncButton.disabled = true;
+			this.syncButton.style.cursor = 'not-allowed';
+			spinner.style.display = 'inline-block';
+			
+			// Add CSS animation if not already added
+			if (!document.querySelector('#sync-spinner-style')) {
+				const style = document.createElement('style');
+				style.id = 'sync-spinner-style';
+				style.textContent = `
+					.loader {
+						color: var(--text-accent);
+						text-indent: -9999em;
+						overflow: hidden;
+						border-radius: 50%;
+						position: relative;
+						transform: translateZ(0);
+						animation: mltShdSpin 2s infinite ease, round 2s infinite ease;
+					}
+					@keyframes mltShdSpin {
+						0% { box-shadow: 0 -0.83em 0 -0.4em, 0 -0.83em 0 -0.42em, 0 -0.83em 0 -0.44em, 0 -0.83em 0 -0.46em, 0 -0.83em 0 -0.477em; }
+						5%, 95% { box-shadow: 0 -0.83em 0 -0.4em, 0 -0.83em 0 -0.42em, 0 -0.83em 0 -0.44em, 0 -0.83em 0 -0.46em, 0 -0.83em 0 -0.477em; }
+						10%, 59% { box-shadow: 0 -0.83em 0 -0.4em, -0.087em -0.825em 0 -0.42em, -0.173em -0.812em 0 -0.44em, -0.256em -0.789em 0 -0.46em, -0.297em -0.775em 0 -0.477em; }
+						20% { box-shadow: 0 -0.83em 0 -0.4em, -0.338em -0.758em 0 -0.42em, -0.555em -0.617em 0 -0.44em, -0.671em -0.488em 0 -0.46em, -0.749em -0.34em 0 -0.477em; }
+						38% { box-shadow: 0 -0.83em 0 -0.4em, -0.377em -0.74em 0 -0.42em, -0.645em -0.522em 0 -0.44em, -0.775em -0.297em 0 -0.46em, -0.82em -0.09em 0 -0.477em; }
+						100% { box-shadow: 0 -0.83em 0 -0.4em, 0 -0.83em 0 -0.42em, 0 -0.83em 0 -0.44em, 0 -0.83em 0 -0.46em, 0 -0.83em 0 -0.477em; }
+					}
+					@keyframes round {
+						0% { transform: rotate(0deg) }
+						100% { transform: rotate(360deg) }
+					}
+				`;
+				document.head.appendChild(style);
+			}
+		} else {
+			this.syncButton.textContent = 'Sync';
+			this.syncButton.disabled = false;
+			this.syncButton.style.cursor = 'pointer';
+			spinner.style.display = 'none';
+		}
+	}
+
 	async onClose() {}
 }
 
@@ -615,5 +710,3 @@ class ResetConfirmModal extends Modal {
 		contentEl.empty();
 	}
 }
-
-
