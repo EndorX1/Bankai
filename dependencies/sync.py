@@ -10,15 +10,15 @@ from datetime import datetime
 from spire.doc import Document, FileFormat
 
 
-#DatabasePath = sys.argv[1]
-#PluginPath = sys.argv[2]
-#selectedCode = sys.argv[3]
-#SubjectPrioritization = sys.argv[4]
+DatabasePath = sys.argv[1]
+PluginPath = sys.argv[2]
+selectedCode = sys.argv[3]
+SubjectPrioritization = sys.argv[4]
 
-DatabasePath = r"C:\Users\eliac\Documents\Obsidian\Plugins\Database"
-PluginPath = r"C:\Users\eliac\Documents\Obsidian\Plugins\.obsidian\plugins\Bankai"
-selectedCode = "sync"
-SubjectPrioritization = "Biologie"
+#DatabasePath = r"C:\Users\eliac\Documents\Obsidian\Plugins\Database"
+#PluginPath = r"C:\Users\eliac\Documents\Obsidian\Plugins\.obsidian\plugins\Bankai"
+#selectedCode = "sync"
+#SubjectPrioritization = "Biologie"
 
 user_data_dir = os.path.join(PluginPath,'dependencies', 'browser_data')
 os.makedirs(user_data_dir, exist_ok=True)
