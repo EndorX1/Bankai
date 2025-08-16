@@ -120,7 +120,7 @@ async def goto_page(page, url):
 async def get_elements(page):
     for i in range(5):
         await page.evaluate('var elements = document.querySelectorAll("[data-id=\'heroField\']"); if(elements.length > 0) elements[elements.length - 1].scrollIntoView();')
-        await page.waitFor(1000)
+        await page.waitFor(300)
     
     elements = await page.querySelectorAll('[data-id="heroField"]')
     
