@@ -31,7 +31,7 @@ export default class Bankai extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		this.addCommand({ id: 'SyncDB', name: 'Sync Database', callback: () => this.SyncDatabase('sync') });
+		this.addCommand({ id: 'SyncDB', name: 'Sync Database', callback: () => this.showSyncModal() });
 
 		this.registerView(VIEW_TYPE_TABLE, (leaf) => new TableView(leaf, this));
 
@@ -96,13 +96,13 @@ export default class Bankai extends Plugin {
 		this.registerInterval(this.intervalId);
 	}
 
-	SyncDatabase(code: string) {
+	SyncDatabase(code: string, SubjectPrioritization: string = "") {
 		const vaultBasePath = (this.app.vault.adapter as any).basePath as string; // Desktop only
 		const pluginId = this.manifest.id;
 		const targetDir = path.join(vaultBasePath, this.settings.DownloadDirectory);
 		const pluginPath = path.join(vaultBasePath, '.obsidian', 'plugins', pluginId);
 		const scriptPath = path.join(vaultBasePath, '.obsidian', 'plugins', pluginId, 'dependencies', 'dist', 'sync', 'sync.exe');
-		const args = [targetDir, pluginPath, code];
+		const args = [targetDir, pluginPath, code, SubjectPrioritization];
 
 		this.isExeRunning('sync.exe').then((running) => {
 			if (running) {
@@ -150,6 +150,23 @@ export default class Bankai extends Plugin {
 				view.reloadData();
 			}
 		});
+	}
+
+	async getSubjects(): Promise<string[]> {
+		try {
+			const adapter = this.app.vault.adapter;
+			const pluginId = this.manifest.id;
+			const dataPath = `.obsidian/plugins/${pluginId}/dependencies/database.json`;
+			const raw = await adapter.read(dataPath);
+			const json = JSON.parse(raw);
+			return Object.keys(json).filter(key => key !== 'SyncTime');
+		} catch {
+			return [];
+		}
+	}
+
+	showSyncModal() {
+		new SyncSelectionModal(this.app, this, (subject) => this.SyncDatabase('sync', subject)).open();
 	}
 
 	resetData() {
@@ -201,6 +218,22 @@ class TableView extends ItemView {
 			rightDiv.style.display = 'flex';
 			rightDiv.style.alignItems = 'center';
 			rightDiv.style.gap = '15px';
+			
+			const syncBtn = rightDiv.createEl('button', { text: 'Sync' });
+			syncBtn.style.padding = '6px 12px';
+			syncBtn.style.backgroundColor = 'var(--interactive-accent)';
+			syncBtn.style.color = 'var(--text-on-accent)';
+			syncBtn.style.border = 'none';
+			syncBtn.style.borderRadius = '4px';
+			syncBtn.style.cursor = 'pointer';
+			syncBtn.style.fontWeight = '500';
+			syncBtn.addEventListener('click', () => this.plugin.showSyncModal());
+			syncBtn.addEventListener('mouseenter', () => {
+				syncBtn.style.backgroundColor = 'var(--interactive-accent-hover)';
+			});
+			syncBtn.addEventListener('mouseleave', () => {
+				syncBtn.style.backgroundColor = 'var(--interactive-accent)';
+			});
 			
 			const reloadBtn = rightDiv.createEl('button', { text: 'Reload' });
 			reloadBtn.style.padding = '4px 8px';
@@ -500,6 +533,51 @@ class BankaiSettingTab extends PluginSettingTab {
 					.setButtonText('Reset Data')
 					.onClick(() => new ResetConfirmModal(this.app, () => this.plugin.resetData()).open()),
 			);
+	}
+}
+
+class SyncSelectionModal extends Modal {
+	private callback: (subject?: string) => void;
+	private plugin: Bankai;
+
+	constructor(app: App, plugin: Bankai, callback: (subject?: string) => void) {
+		super(app);
+		this.callback = callback;
+		this.plugin = plugin;
+	}
+
+	async onOpen() {
+		const { contentEl } = this;
+		contentEl.createEl('h2', { text: 'Select Sync Option' });
+
+		const buttonDiv = contentEl.createEl('div');
+		buttonDiv.style.display = 'flex';
+		buttonDiv.style.flexDirection = 'column';
+		buttonDiv.style.gap = '10px';
+		buttonDiv.style.marginTop = '20px';
+
+		const allBtn = buttonDiv.createEl('button', { text: 'Sync Whole Database' });
+		allBtn.addEventListener('click', () => {
+			this.callback();
+			this.close();
+		});
+
+		const subjects = await this.plugin.getSubjects();
+		if (subjects.length > 0) {
+			contentEl.createEl('p', { text: 'Or select a specific subject:' });
+			subjects.forEach(subject => {
+				const btn = buttonDiv.createEl('button', { text: subject });
+				btn.addEventListener('click', () => {
+					this.callback(subject);
+					this.close();
+				});
+			});
+		}
+	}
+
+	onClose() {
+		const { contentEl } = this;
+		contentEl.empty();
 	}
 }
 
