@@ -6,4 +6,4 @@ pyinstaller --onefile --noconsole ^
   --add-data "%USERPROFILE%\AppData\Local\ms-playwright;ms-playwright" ^
   browser.py
 
-pyinstaller sync.py
+pyinstaller --noconsole --hidden-import=spire.doc --collect-all=spire sync.py
