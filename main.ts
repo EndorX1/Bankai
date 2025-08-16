@@ -111,9 +111,11 @@ export default class Bankai extends Plugin {
 			}
 			if (code === "sync") {
 				new Notice("Started Sync");
+				this.startInterval(this.settings.DownloadInterval);
 			}
 			else {
 				new Notice("Started Setup");
+				this.startInterval(this.settings.DownloadInterval);
 			}
 
 			const subprocess = spawn(scriptPath, args);
@@ -125,15 +127,28 @@ export default class Bankai extends Plugin {
 			subprocess.stdout.on('data', (data) => {
 			if (code === "sync") {
 				new Notice("Finished Sync");
+				this.reloadTableView();
+				this.startInterval(this.settings.DownloadInterval);
 			}
 			else {
 				new Notice("Finished Setup");
+				this.startInterval(this.settings.DownloadInterval);
 			}
 			});
 
 			//subprocess.stderr.on('data', (data) => {
 			//	new Notice(String(data));
 			//});
+		});
+	}
+
+	reloadTableView() {
+		const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_TABLE);
+		leaves.forEach(leaf => {
+			const view = leaf.view as TableView;
+			if (view && view.reloadData) {
+				view.reloadData();
+			}
 		});
 	}
 
@@ -150,6 +165,7 @@ class TableView extends ItemView {
 	private plugin: Bankai;
 	private allData: Row[] = [];
 	private filteredData: Row[] = [];
+	private syncTime: string = '';
 
 	constructor(leaf: WorkspaceLeaf, plugin: Bankai) {
 		super(leaf);
@@ -168,11 +184,37 @@ class TableView extends ItemView {
 		const container = this.containerEl.children[1] as HTMLElement | undefined;
 		if (!container) return;
 		container.empty();
-		container.createEl('h2', { text: 'Data Table' });
+		
+		const headerDiv = container.createEl('div');
+		headerDiv.style.display = 'flex';
+		headerDiv.style.justifyContent = 'space-between';
+		headerDiv.style.alignItems = 'center';
+		headerDiv.style.marginBottom = '20px';
+		
+		headerDiv.createEl('h2', { text: 'Data Table' });
 
 		try {
 			this.allData = await this.loadJsonData();
 			this.filteredData = [...this.allData];
+			
+			const rightDiv = headerDiv.createEl('div');
+			rightDiv.style.display = 'flex';
+			rightDiv.style.alignItems = 'center';
+			rightDiv.style.gap = '15px';
+			
+			const reloadBtn = rightDiv.createEl('button', { text: 'Reload' });
+			reloadBtn.style.padding = '4px 8px';
+			reloadBtn.addEventListener('click', () => this.reloadData());
+			
+			const syncDiv = rightDiv.createEl('div');
+			syncDiv.style.textAlign = 'right';
+			syncDiv.style.fontSize = '0.9em';
+			syncDiv.style.color = 'var(--text-muted)';
+			if (this.syncTime) {
+				syncDiv.createEl('div', { text: 'Last Synced:' });
+				syncDiv.createEl('div', { text: this.syncTime });
+			}
+			
 			this.createControls(container);
 			this.createTable(container, this.filteredData);
 		} catch (e) {
@@ -184,10 +226,22 @@ class TableView extends ItemView {
 	private async loadJsonData(): Promise<Row[]> {
 		const adapter = this.app.vault.adapter;
 		const pluginId = this.plugin.manifest.id;
-		const dataPath = `.obsidian/Plugins/${pluginId}/dependencies/database.json`;
+		const dataPath = `.obsidian/plugins/${pluginId}/dependencies/database.json`;
 		const raw = await adapter.read(dataPath);
 		const json = JSON.parse(raw);
+		this.syncTime = json.SyncTime || '';
 		return this.extractFiles(json);
+	}
+
+	async reloadData() {
+		try {
+			this.allData = await this.loadJsonData();
+			this.filteredData = [...this.allData];
+			this.onOpen();
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : String(e);
+			new Notice('Error reloading data: ' + msg);
+		}
 	}
 
 	private extractFiles(data: any): Row[] {
