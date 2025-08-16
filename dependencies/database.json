@@ -1,6 +1,8 @@
 {
   "Deutsch": {
-    "__FileData__": {}
+    "__FileData__": {
+      "File" : "2009-09-23 23-15-12"
+    }
   },
   "Informatik": {
     "__FileData__": {}
@@ -10,5 +12,6 @@
   },
   "Biologie": {
     "__FileData__": {}
-  }
+  },
+  "SyncTime" : "2009-09-23 23-15-12"
 }

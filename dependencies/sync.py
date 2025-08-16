@@ -260,7 +260,7 @@ async def update_database(page):
                 Folders = refreshed_Folders
             else:
                 #print("Danger someone deleted a Folder mid Sync")
-                break
+                pass
         
         await page.waitFor(500)
         await page.goBack()
@@ -290,6 +290,8 @@ async def main():
         
         # Clear path after processing subject
         current_path.clear()
+        
+    structure["SyncTime"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
     # Save structure to JSON
     with open(dataPath, 'w', encoding='utf-8') as f:
