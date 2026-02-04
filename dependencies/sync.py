@@ -17,26 +17,25 @@ import subprocess
 #selectedCode = sys.argv[3]
 #SubjectPrioritization = sys.argv[4]
 
-DatabasePath = r"/home/elia/Documents/Obsidian/ObsidianPlugin/"
+DatabasePath = r"/home/elia/Documents/Obsidian/ObsidianPlugin/Database/"
 PluginPath = r"/home/elia/Documents/Obsidian/ObsidianPlugin/.obsidian/plugins/Bankai/"
-selectedCode = "setup"
-SubjectPrioritization = ""
+selectedCode = "sync"
+SubjectPrioritization = "Italienisch"
 
 user_data_dir = os.path.join(PluginPath,'dependencies', 'browser_data')
 os.makedirs(user_data_dir, exist_ok=True)
     
-chrome_exe = os.path.join(PluginPath,'dependencies', 'chromium', 'chrome-win', 'chrome.exe')
+# Check and download Chromium if needed (Windows only)
+chromium_dir = os.path.join(PluginPath, 'dependencies', 'chromium')
+if sys.platform == "win32":
+    chrome_path = os.path.join(chromium_dir, 'chrome-win', 'chrome.exe')
+elif sys.platform == "linux":
+    chrome_path = os.path.join(chromium_dir, 'chrome-linux', 'chrome')
+else:
+    raise ValueError("The provided operating system is not supported")
 
 
 async def open_sharepoint():  
-    # Check and download Chromium if needed (Windows only)
-    chromium_dir = os.path.join(PluginPath, 'dependencies', 'chromium')
-    if sys.platform == "win32":
-        chrome_path = os.path.join(chromium_dir, 'chrome-win', 'chrome.exe')
-    elif sys.platform == "linux":
-        chrome_path = os.path.join(chromium_dir, 'chrome-linux', 'chrome')
-    else:
-        raise ValueError("The provided operating system is not supported")
     print(chrome_path)
     
     if not os.path.exists(chrome_path):
@@ -111,9 +110,9 @@ async def open_sharepoint():
 async def open_browser():
     # Launch in headless mode with saved data
     browser = await launch(
-        headless=True,
+        headless=False,
         userDataDir=user_data_dir,
-        executablePath=chrome_exe,
+        executablePath=chrome_path,
         args=[
             '--no-sandbox',
             '--disable-setuid-sandbox',
@@ -251,102 +250,94 @@ async def download_files(page, Files):
     #print(f"All {downloads_started} downloads completed!")
     return
 
-async def update_database(page):
+async def update_database(page):   
     Folders, Files = await get_elements(page)
     await download_files(page, Files)
     
-    if Folders:
-        for i in range(len(Folders)):
-            el = Folders[i]
-            # Get folder name
-            folder_name = await page.evaluate('(e) => e.textContent.trim()', el)
-            
-            # Add folder to structure if it doesn't exist
-            current_dict = structure
-            for folder in current_path:
-                current_dict = current_dict[folder]
-            if folder_name not in current_dict:
-                current_dict[folder_name] = {}
-            
-            # Navigate into folder
-            current_path.append(folder_name)
-            await el.executionContext.evaluate('element => element.scrollIntoViewIfNeeded()', el)
-            await el.click()
-            await page.waitFor(500)
-            await update_database(page)
-            
-            # Go back
-            current_path.pop()
-            refreshed_Folders, _ = await get_elements(page)
-            if len(refreshed_Folders) >= len(Folders):
-                Folders = refreshed_Folders
-            else:
-                #print("Danger someone deleted a Folder mid Sync")
-                pass
+    # Iterate through folders with state recovery
+    for i in range(len(Folders)):
+        await page.waitForSelector('[data-actions="[{"key":"header-field-click","data":1},{"key":"header-field-keyDown","data":1}]"]', timeout=30000)
+        sortByNameButton = await page.querySelector('[data-actions="[{"key":"header-field-click","data":1},{"key":"header-field-keyDown","data":1}]"]')
+        await sortByNameButton.click()
+        sort_button = await page.xpath("//span[text()='Ascending' or text()='Aufsteigend']")
+        if sort_button:
+            await sort_button[0].click()
+            await asyncio.sleep(1)
         
-        await page.waitFor(500)
+        # Re-verify folder list after returning from recursion
+        refreshed_Folders, _ = await get_elements(page)
+        if i >= len(refreshed_Folders):
+            print("Danger someone deleted a Folder mid Sync")
+            break
+        
+        for il in refreshed_Folders:
+            print(await page.evaluate('(z) => z.textContent.trim()', il))
+            
+        el = refreshed_Folders[i]
+        folder_name = await page.evaluate('(e) => e.textContent.trim()', el)
+        
+        # Cycle Detection: Prevent re-entry into existing path segments
+        if folder_name in current_path:
+            continue
+            
+        # Update structure and local path
+        current_dict = structure
+        for path_segment in current_path:
+            current_dict = current_dict[path_segment]
+        if folder_name not in current_dict:
+            current_dict[folder_name] = {}
+        
+        current_path.append(folder_name)
+        
+        # Navigate forward
+        await el.executionContext.evaluate('element => element.scrollIntoView()', el)
+        await el.click()
+        await asyncio.sleep(2) # Required for SharePoint DOM state update
+        
+        # Recursive call
+        await update_database(page)
+        
+        # Navigate backward and synchronize state
+        current_path.pop()
         await page.goBack()
-    else:
-        await page.waitFor(500)
-        await page.goBack()
+        await page.waitForSelector('[data-id="heroField"]', timeout=30000)
+        await asyncio.sleep(1) 
+        
     return
 
 
-async def main():
+async def sync_subject(page, subject_name, url, structure, data_path):
+    """Encapsulates the sync logic for a single subject."""
+    if subject_name not in structure:
+        structure[subject_name] = {}
     
+    current_path.clear()
+    current_path.append(subject_name)
+    
+    await goto_page(page, url)
+    await update_database(page)
+    
+    current_path.clear()
+    
+    structure["SyncTime"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    with open(data_path, 'w', encoding='utf-8') as f:
+        json.dump(structure, f, indent=2, ensure_ascii=False)
+
+async def main():
     browser, page = await open_browser()
     
-    if SubjectPrioritization == "":
-    
-        for i in range(len(pages)):
-            subject_name = Subjects[i]
-            
-            # Initialize subject in structure
-            if subject_name not in structure:
-                structure[subject_name] = {}
-            
-            # Set current path to subject
-            current_path.clear()
-            current_path.append(subject_name)
-            
-            await goto_page(page, pages[i])
-            await update_database(page)
-            
-            # Clear path after processing subject
-            current_path.clear()
-            
-            # Update sync time and save structure to JSON after each subject
-            structure["SyncTime"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            with open(dataPath, 'w', encoding='utf-8') as f:
-                json.dump(structure, f, indent=2, ensure_ascii=False)
+    # Determine which subjects to process
+    if SubjectPrioritization:
+        # Filter for specific subject only
+        targets = [(SubjectPrioritization, pages[Subjects.index(SubjectPrioritization)])]
     else:
-        subject_name = SubjectPrioritization
-        
-                    # Initialize subject in structure
-        if subject_name not in structure:
-            structure[subject_name] = {}
-        
-        # Set current path to subject
-        current_path.clear()
-        current_path.append(subject_name)
-        
-        for i in range(len(Subjects)):
-            if Subjects[i] == subject_name:
-                n = i
-        
-        await goto_page(page, pages[n])
-        await update_database(page)
-        
-        # Clear path after processing subject
-        current_path.clear()
-        
-        # Update sync time and save structure to JSON after each subject
-        structure["SyncTime"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        with open(dataPath, 'w', encoding='utf-8') as f:
-            json.dump(structure, f, indent=2, ensure_ascii=False)
+        # Process all subjects
+        targets = list(zip(Subjects, pages))
+
+    for name, url in targets:
+        await sync_subject(page, name, url, structure, dataPath)
             
-    #print("Database structure saved to database.json")
-    await browser.close() 
+    await browser.close()
 
     
 

@@ -2,4 +2,4 @@ python -m PyInstaller --noconsole --hidden-import=spire.doc --hidden-import=pypp
 
 chmod +x dependencies/linux/sync
 
-./dependencies/linux/sync/sync "/home/elia/Documents/Obsidian/ObsidianPlugin/" "/home/elia/Documents/Obsidian/ObsidianPlugin/.obsidian/plugins/Bankai/" "setup" ""
+./dependencies/linux/sync/sync "/home/elia/Documents/Obsidian/ObsidianPlugin/" "/home/elia/Documents/Obsidian/ObsidianPlugin/.obsidian/plugins/Bankai/" "setup" "Italienisch"
