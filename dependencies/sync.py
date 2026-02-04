@@ -29,14 +29,23 @@ chrome_exe = os.path.join(PluginPath,'dependencies', 'chromium', 'chrome-win', '
 async def open_sharepoint():  
     # Check and download Chromium if needed (Windows only)
     chromium_dir = os.path.join(PluginPath, 'dependencies', 'chromium')
-    chrome_path = os.path.join(chromium_dir, 'chrome-win', 'chrome.exe')
-    #print(chrome_path)
+    if sys.platform == "win32":
+        chrome_path = os.path.join(chromium_dir, 'chrome-win', 'chrome.exe')
+    elif sys.platform == "linux":
+        chrome_path = os.path.join(chromium_dir, 'chrome-linux', 'chrome')
+    else:
+        raise ValueError("The provided operating system is not supported")
+    print(chrome_path)
     
     if not os.path.exists(chrome_path):
         #print("Downloading Chromium...")
         os.makedirs(chromium_dir, exist_ok=True)
         
-        url = "https://www.googleapis.com/download/storage/v1/b/chromium-browser-snapshots/o/Win_x64%2F1000027%2Fchrome-win.zip?alt=media"
+        if sys.platform == "win32":
+            url = "https://www.googleapis.com/download/storage/v1/b/chromium-browser-snapshots/o/Win_x64%2F1579260%2Fchrome-win.zip?alt=media"
+        else:
+            url = "https://www.googleapis.com/download/storage/v1/b/chromium-browser-snapshots/o/Linux_x64%2F1579321%2Fchrome-linux.zip?alt=media"
+            
         
         # Download and extract
         zip_path = os.path.join(chromium_dir, 'chromium.zip')
@@ -75,15 +84,6 @@ async def open_sharepoint():
     
     await browser.close()
     
-
-
-
-
-
-
-
-
-
 
 
 

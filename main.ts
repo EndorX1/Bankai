@@ -1,4 +1,4 @@
-import { App, ItemView, Plugin, WorkspaceLeaf, PluginSettingTab, Setting, Modal, Notice } from 'obsidian';
+import { App, ItemView, Plugin, WorkspaceLeaf, PluginSettingTab, Setting, Modal, Notice, Platform } from 'obsidian';
 import { spawn, exec } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -63,17 +63,20 @@ export default class Bankai extends Plugin {
 	}
 
 	async isExeRunning(exeName: string): Promise<boolean> {
-		return new Promise((resolve) => {
-			exec('tasklist', (err, stdout) => {
-				if (err) {
-					resolve(false);
-					return;
-				}
-				const running = stdout.toLowerCase().includes(exeName.toLowerCase());
-				resolve(running);
-			});
-		});
-	}
+        return new Promise((resolve) => {
+            // Select command based on OS
+            const cmd = Platform.isWin ? 'tasklist' : 'ps -A';
+            
+            exec(cmd, (err, stdout) => {
+                if (err) {
+                    resolve(false);
+                    return;
+                }
+                const running = stdout.toLowerCase().includes(exeName.toLowerCase());
+                resolve(running);
+            });
+        });
+    }
 
 	async activateView() {
 		const { workspace } = this.app;
@@ -104,47 +107,66 @@ export default class Bankai extends Plugin {
 	}
 
 	SyncDatabase(code: string, SubjectPrioritization: string = "") {
-		this.isExeRunning('sync.exe').then((running) => {
-			if (running) {
-				new Notice('Already syncing');
-				return;
-			}
-			
-			this.updateSyncButtons();
-			
-			const vaultBasePath = (this.app.vault.adapter as any).basePath as string;
-			const pluginId = this.manifest.id;
-			const targetDir = path.join(vaultBasePath, this.settings.DownloadDirectory);
-			const pluginPath = path.join(vaultBasePath, '.obsidian', 'plugins', pluginId);
-			const scriptPath = path.join(vaultBasePath, '.obsidian', 'plugins', pluginId, 'dependencies', 'dist', 'sync', 'sync.exe');
-			const args = [targetDir, pluginPath, code, SubjectPrioritization];
-			
-			if (code === "sync") {
-				new Notice("Started Sync");
-				this.startInterval(this.settings.DownloadInterval);
-			}
-			else {
-				new Notice("Started Setup");
-				this.startInterval(this.settings.DownloadInterval);
-			}
+        // 1. Declare scriptName in outer scope
+        let scriptName = '';
 
-			const subprocess = spawn(scriptPath, args);
+        if (Platform.isWin) {
+            scriptName = 'sync.exe';
+        } else if (Platform.isLinux) {
+            scriptName = 'sync';
+        } else {
+            throw new Error(`Unsupported Operating System: ${navigator.platform}`);
+        }
 
-			subprocess.stdout.on('data', (data) => {
-				this.updateSyncButtons();
-				
-				if (code === "sync") {
-					new Notice("Finished Sync");
-					this.reloadTableView();
-					this.startInterval(this.settings.DownloadInterval);
-				}
-				else {
-					new Notice("Finished Setup");
-					this.startInterval(this.settings.DownloadInterval);
-				}
-			});
-		});
-	}
+        this.isExeRunning(scriptName).then((running) => {
+            if (running) {
+                new Notice('Already syncing');
+                return;
+            }
+            
+            this.updateSyncButtons();
+            
+            const vaultBasePath = (this.app.vault.adapter as any).basePath as string;
+            const pluginId = this.manifest.id;
+            const targetDir = path.join(vaultBasePath, this.settings.DownloadDirectory);
+            const pluginPath = path.join(vaultBasePath, '.obsidian', 'plugins', pluginId);
+            
+            // 2. Declare scriptPath in outer scope
+            let scriptPath = '';
+
+            if (Platform.isWin) {
+                scriptPath = path.join(pluginPath, 'dependencies', 'win', 'sync.exe');
+            } else {
+                // Ensure the linux binary has execution permissions (chmod +x)
+                scriptPath = path.join(pluginPath, 'dependencies', 'linux', 'sync');
+            }
+            
+            const args = [targetDir, pluginPath, code, SubjectPrioritization];
+            
+            if (code === "sync") {
+                new Notice("Started Sync");
+                this.startInterval(this.settings.DownloadInterval);
+            } else {
+                new Notice("Started Setup");
+                this.startInterval(this.settings.DownloadInterval);
+            }
+
+            const subprocess = spawn(scriptPath, args);
+
+            subprocess.stdout.on('data', (data) => {
+                this.updateSyncButtons();
+                
+                if (code === "sync") {
+                    new Notice("Finished Sync");
+                    this.reloadTableView();
+                    this.startInterval(this.settings.DownloadInterval);
+                } else {
+                    new Notice("Finished Setup");
+                    this.startInterval(this.settings.DownloadInterval);
+                }
+            });
+        });
+    }
 
 	private startButtonUpdateInterval() {
 		if (this.buttonUpdateIntervalId !== null) {
@@ -427,12 +449,33 @@ class TableView extends ItemView {
 	}
 
 	private sortData(field: keyof Row) {
-		this.filteredData.sort((a, b) => a[field].localeCompare(b[field]));
+		if (field === COL_DATE) {
+			// Chronological sort for dates
+			this.filteredData.sort((a, b) => {
+				// simple fallback to 0 if the date string is invalid
+				const dateA = new Date(a[field]).getTime() || 0;
+				const dateB = new Date(b[field]).getTime() || 0;
+				return dateA - dateB;
+			});
+		} else {
+			// Alphabetical sort for everything else
+			this.filteredData.sort((a, b) => a[field].localeCompare(b[field]));
+		}
 		this.updateTable();
 	}
 
 	private sortDataReverse(field: keyof Row) {
-		this.filteredData.sort((a, b) => b[field].localeCompare(a[field]));
+		if (field === COL_DATE) {
+			// Convert to timestamp for correct chronological sorting
+			this.filteredData.sort((a, b) => {
+				const dateA = new Date(a[field]).getTime();
+				const dateB = new Date(b[field]).getTime();
+				return dateB - dateA;
+			});
+		} else {
+			// Use standard string sorting for other columns
+			this.filteredData.sort((a, b) => b[field].localeCompare(a[field]));
+		}
 		this.updateTable();
 	}
 
