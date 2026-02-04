@@ -107,17 +107,30 @@ export default class Bankai extends Plugin {
 	}
 
 	SyncDatabase(code: string, SubjectPrioritization: string = "") {
-        // 1. Declare scriptName in outer scope
+        // 1. Universal Variable Declaration (Fixes Scope Issues)
         let scriptName = '';
+        let scriptDir = '';
+        let scriptBinary = '';
+
+        // 2. OS-Agnostic Path Resolution
+        const vaultBasePath = (this.app.vault.adapter as any).basePath as string;
+        const pluginId = this.manifest.id;
+        const pluginPath = path.join(vaultBasePath, '.obsidian', 'plugins', pluginId);
+        const targetDir = path.join(vaultBasePath, this.settings.DownloadDirectory);
 
         if (Platform.isWin) {
             scriptName = 'sync.exe';
+            scriptDir = path.join(pluginPath, 'dependencies', 'win', 'sync');
+            scriptBinary = path.join(scriptDir, 'sync.exe');
         } else if (Platform.isLinux) {
             scriptName = 'sync';
+            scriptDir = path.join(pluginPath, 'dependencies', 'linux', 'sync');
+            scriptBinary = path.join(scriptDir, 'sync');
         } else {
             throw new Error(`Unsupported Operating System: ${navigator.platform}`);
         }
 
+        // 3. Execution Logic
         this.isExeRunning(scriptName).then((running) => {
             if (running) {
                 new Notice('Already syncing');
@@ -126,48 +139,63 @@ export default class Bankai extends Plugin {
             
             this.updateSyncButtons();
             
-            const vaultBasePath = (this.app.vault.adapter as any).basePath as string;
-            const pluginId = this.manifest.id;
-            const targetDir = path.join(vaultBasePath, this.settings.DownloadDirectory);
-            const pluginPath = path.join(vaultBasePath, '.obsidian', 'plugins', pluginId);
-            
-            // 2. Declare scriptPath in outer scope
-            let scriptPath = '';
-
-            if (Platform.isWin) {
-                scriptPath = path.join(pluginPath, 'dependencies', 'win', 'sync', 'sync.exe');
-            } else {
-                // Ensure the linux binary has execution permissions (chmod +x)
-                scriptPath = path.join(pluginPath, 'dependencies', 'linux', 'sync', 'sync');
-            }
-            
-            const args = [targetDir, pluginPath, code, SubjectPrioritization];
-            
+            // Notification Logic
             if (code === "sync") {
                 new Notice("Started Sync");
-                this.startInterval(this.settings.DownloadInterval);
             } else {
                 new Notice("Started Setup");
-                this.startInterval(this.settings.DownloadInterval);
             }
 
-            const subprocess = spawn(scriptPath, args);
+            const args = [targetDir, pluginPath, code, SubjectPrioritization];
 
-            subprocess.stdout.on('data', (data) => {
+            try {
+				const subprocess = spawn(scriptBinary, args);
+
+                // --- Universal Error Handling ---
+
+                // 1. Spawn Errors (Process failed to start)
+                subprocess.on('error', (err) => {
+                    console.error("[Bankai] Spawn Error:", err);
+                    new Notice(`Critical Error: ${err.message}`);
+                    this.updateSyncButtons();
+                });
+
+                // 2. Runtime Errors (Stderr output)
+                subprocess.stderr.on('data', (data) => {
+                    const msg = data.toString();
+                    console.error("[Bankai] Stderr:", msg);
+                    // Only notify on stderr if it's critical, otherwise it spams
+                });
+
+                // 3. Standard Output (Logs from Python)
+                subprocess.stdout.on('data', (data) => {
+                    console.log(`[Bankai] Stdout: ${data}`);
+                    this.updateSyncButtons();
+                });
+
+                // 4. Exit Handling (Process finished)
+                subprocess.on('close', (codeNumber) => {
+                    console.log(`[Bankai] Process exited with code ${codeNumber}`);
+                    
+                    if (codeNumber === 0) {
+                        const action = code === "sync" ? "Sync" : "Setup";
+                        new Notice(`Finished ${action}`);
+                        if (code === "sync") this.reloadTableView();
+                    } else {
+                        new Notice(`Process failed. Exit Code: ${codeNumber}. Check Console.`);
+                    }
+                    
+                    this.startInterval(this.settings.DownloadInterval);
+                    this.updateSyncButtons();
+                });
+
+            } catch (e) {
+                console.error("[Bankai] Execution Exception:", e);
+                new Notice(`Failed to launch: ${e instanceof Error ? e.message : String(e)}`);
                 this.updateSyncButtons();
-                
-                if (code === "sync") {
-                    new Notice("Finished Sync");
-                    this.reloadTableView();
-                    this.startInterval(this.settings.DownloadInterval);
-                } else {
-                    new Notice("Finished Setup");
-                    this.startInterval(this.settings.DownloadInterval);
-                }
-            });
+            }
         });
     }
-
 	private startButtonUpdateInterval() {
 		if (this.buttonUpdateIntervalId !== null) {
 			window.clearInterval(this.buttonUpdateIntervalId);

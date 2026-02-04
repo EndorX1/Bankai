@@ -83,6 +83,7 @@ async def open_sharepoint():
     browser = await launch(
         headless=False,
         userDataDir=user_data_dir,
+        dumpio=True,
         executablePath=chrome_path,
         args=[
             '--no-sandbox',
