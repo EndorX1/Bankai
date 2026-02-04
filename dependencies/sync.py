@@ -8,17 +8,19 @@ import platform
 import json
 from datetime import datetime
 from spire.doc import Document, FileFormat
+import stat
+import subprocess
 
 
-DatabasePath = sys.argv[1]
-PluginPath = sys.argv[2]
-selectedCode = sys.argv[3]
-SubjectPrioritization = sys.argv[4]
+#DatabasePath = sys.argv[1]
+#PluginPath = sys.argv[2]
+#selectedCode = sys.argv[3]
+#SubjectPrioritization = sys.argv[4]
 
-#DatabasePath = r"C:\Users\eliac\Documents\Obsidian\Plugins\Database"
-#PluginPath = r"C:\Users\eliac\Documents\Obsidian\Plugins\.obsidian\plugins\Bankai"
-#selectedCode = "sync"
-#SubjectPrioritization = "Biologie"
+DatabasePath = r"/home/elia/Documents/Obsidian/ObsidianPlugin/"
+PluginPath = r"/home/elia/Documents/Obsidian/ObsidianPlugin/.obsidian/plugins/Bankai/"
+selectedCode = "setup"
+SubjectPrioritization = ""
 
 user_data_dir = os.path.join(PluginPath,'dependencies', 'browser_data')
 os.makedirs(user_data_dir, exist_ok=True)
@@ -38,16 +40,16 @@ async def open_sharepoint():
     print(chrome_path)
     
     if not os.path.exists(chrome_path):
-        #print("Downloading Chromium...")
+        print("Downloading Chromium...")
         os.makedirs(chromium_dir, exist_ok=True)
         
+        # 1. URL Selection
         if sys.platform == "win32":
             url = "https://www.googleapis.com/download/storage/v1/b/chromium-browser-snapshots/o/Win_x64%2F1579260%2Fchrome-win.zip?alt=media"
         else:
             url = "https://www.googleapis.com/download/storage/v1/b/chromium-browser-snapshots/o/Linux_x64%2F1579321%2Fchrome-linux.zip?alt=media"
             
-        
-        # Download and extract
+        # 2. Download
         zip_path = os.path.join(chromium_dir, 'chromium.zip')
         response = requests.get(url, stream=True)
         with open(zip_path, 'wb') as f:
@@ -55,10 +57,27 @@ async def open_sharepoint():
                 if chunk:
                     f.write(chunk)
         
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall(chromium_dir)
+        # 3. Extraction
+        print("Extracting...")
+        if sys.platform == "linux":
+            # --- THE FIX: Use system unzip instead of Python zipfile ---
+            # This preserves permissions (+x) and Symlinks
+            try:
+                subprocess.run(["unzip", "-o", zip_path, "-d", chromium_dir], check=True)
+            except FileNotFoundError:
+                print("Error: 'unzip' command not found. Please install it with: sudo dnf install unzip")
+                raise
+        else:
+            # Windows doesn't care about permissions, zipfile is fine
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(chromium_dir)
+
         os.remove(zip_path)
-        #print("Chromium downloaded and extracted!")
+        
+        # 4. Safety Check (Just in case)
+        if sys.platform == "linux":
+            # Explicitly force the main binary to be executable, just to be safe
+            subprocess.run(["chmod", "+x", chrome_path], check=False)
     
     # Launch browser
     browser = await launch(

@@ -135,10 +135,10 @@ export default class Bankai extends Plugin {
             let scriptPath = '';
 
             if (Platform.isWin) {
-                scriptPath = path.join(pluginPath, 'dependencies', 'win', 'sync.exe');
+                scriptPath = path.join(pluginPath, 'dependencies', 'win', 'sync', 'sync.exe');
             } else {
                 // Ensure the linux binary has execution permissions (chmod +x)
-                scriptPath = path.join(pluginPath, 'dependencies', 'linux', 'sync');
+                scriptPath = path.join(pluginPath, 'dependencies', 'linux', 'sync', 'sync');
             }
             
             const args = [targetDir, pluginPath, code, SubjectPrioritization];
