@@ -28,3 +28,5 @@ dependencies/browser_data/*
 sync.spec
 
 build
+
+dev/venv
