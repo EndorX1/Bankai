@@ -12,15 +12,15 @@ import stat
 import subprocess
 
 
-#DatabasePath = sys.argv[1]
-#PluginPath = sys.argv[2]
-#selectedCode = sys.argv[3]
-#SubjectPrioritization = sys.argv[4]
+DatabasePath = sys.argv[1]
+PluginPath = sys.argv[2]
+selectedCode = sys.argv[3]
+SubjectPrioritization = sys.argv[4]
 
-DatabasePath = r"/home/elia/Documents/Obsidian/ObsidianPlugin/Database/"
-PluginPath = r"/home/elia/Documents/Obsidian/ObsidianPlugin/.obsidian/plugins/Bankai/"
-selectedCode = "sync"
-SubjectPrioritization = "Italienisch"
+#DatabasePath = r"/home/elia/Documents/Obsidian/ObsidianPlugin/Database/"
+#PluginPath = r"/home/elia/Documents/Obsidian/ObsidianPlugin/.obsidian/plugins/Bankai/"
+#selectedCode = "sync"
+#SubjectPrioritization = "Italienisch"
 
 user_data_dir = os.path.join(PluginPath,'dependencies', 'browser_data')
 os.makedirs(user_data_dir, exist_ok=True)
