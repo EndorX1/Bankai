@@ -1,12 +1,15 @@
 {
-	"name": "obsidian-sample-plugin",
-	"version": "1.0.0",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"name": "Bankai",
+	"version": "2.0.0",
+	"description": "Sync Sharepoint files to Obsidian vault and lets you access them easily.",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
-		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"watch": "node esbuild.config.mjs",
+		"typecheck": "tsc --noEmit --skipLibCheck",
+		"build": "npm run typecheck && node esbuild.config.mjs production",
+		"clean": "rm -f main.js",
 		"version": "node version-bump.mjs && git add manifest.json versions.json",
 		"lint": "eslint ."
 	},

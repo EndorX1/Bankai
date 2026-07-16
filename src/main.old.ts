@@ -1,4 +1,7 @@
-import { App, ItemView, Plugin, WorkspaceLeaf, PluginSettingTab, Setting, Notice } from 'obsidian';
+import { App, ItemView, Plugin, WorkspaceLeaf, PluginSettingTab, Setting, Modal, Notice, Platform } from 'obsidian';
+import { spawn, exec } from 'child_process';
+import * as path from 'path';
+import * as fs from 'fs';
 
 const VIEW_TYPE_TABLE = 'table-view' as const;
 
@@ -23,6 +26,9 @@ type Row = Record<typeof COL_NAME | typeof COL_SUBJECT | typeof COL_FOLDER | typ
 
 export default class Bankai extends Plugin {
 	settings!: PluginSettings;
+	private intervalId: number | null = null;
+	private buttonUpdateIntervalId: number | null = null;
+
 
 	async onload() {
 		await this.loadSettings();
@@ -36,42 +42,214 @@ export default class Bankai extends Plugin {
 		});
 
 		this.addSettingTab(new BankaiSettingTab(this.app, this));
+
+		this.startInterval(this.settings.DownloadInterval);
+		this.startButtonUpdateInterval();
 	}
 
-	onunload() {}
+	onunload() {
+		if (this.intervalId !== null) {
+			window.clearInterval(this.intervalId);
+			this.intervalId = null;
+		}
+		if (this.buttonUpdateIntervalId !== null) {
+			window.clearInterval(this.buttonUpdateIntervalId);
+			this.buttonUpdateIntervalId = null;
+		}
+	}
 
 	private async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 	}
 
-	async saveSettings() {
-		await this.saveData(this.settings);
-	}
-
 	async isExeRunning(exeName: string): Promise<boolean> {
-		return false;
-	}
+        return new Promise((resolve) => {
+            // Select command based on OS
+            const cmd = Platform.isWin ? 'tasklist' : 'ps -A';
+            
+            exec(cmd, (err, stdout) => {
+                if (err) {
+                    resolve(false);
+                    return;
+                }
+                const running = stdout.toLowerCase().includes(exeName.toLowerCase());
+                resolve(running);
+            });
+        });
+    }
 
 	async activateView() {
 		const { workspace } = this.app;
+		let leaf: WorkspaceLeaf | null = null;
 		const leaves = workspace.getLeavesOfType(VIEW_TYPE_TABLE);
 
-		const existingLeaf = leaves.length > 0 ? leaves[0] ?? null : null;
-		const newLeaf = workspace.getRightLeaf(false);
-		let leaf: WorkspaceLeaf | null = existingLeaf ?? newLeaf ?? null;
-		if (leaf) {
-			await leaf.setViewState({ type: VIEW_TYPE_TABLE, active: true });
-			workspace.revealLeaf(leaf);
+		leaf = leaves.length > 0 ? leaves[0] : workspace.getRightLeaf(false);
+		await leaf?.setViewState({ type: VIEW_TYPE_TABLE, active: true });
+		workspace.revealLeaf(leaf!);
+	}
+
+	startInterval(minutes: number) {
+		if (!this.settings.PluginEnabled) {
+			if (this.intervalId !== null) {
+				window.clearInterval(this.intervalId);
+				this.intervalId = null;
+			}
+			return;
+		}
+
+		if (this.intervalId !== null) {
+			window.clearInterval(this.intervalId);
+		}
+
+		const ms = Math.max(1, Math.floor(minutes)) * 60 * 1000;
+		this.intervalId = window.setInterval(() => this.SyncDatabase('sync'), ms);
+		this.registerInterval(this.intervalId);
+	}
+
+	SyncDatabase(code: string, SubjectPrioritization: string = "") {
+        // 1. Universal Variable Declaration (Fixes Scope Issues)
+        let scriptName = '';
+        let scriptDir = '';
+        let scriptBinary = '';
+
+        // 2. OS-Agnostic Path Resolution
+        const vaultBasePath = (this.app.vault.adapter as any).basePath as string;
+        const pluginId = this.manifest.id;
+        const pluginPath = path.join(vaultBasePath, '.obsidian', 'plugins', pluginId);
+        const targetDir = path.join(vaultBasePath, this.settings.DownloadDirectory);
+
+        if (Platform.isWin) {
+            scriptName = 'sync.exe';
+            scriptDir = path.join(pluginPath, 'dependencies', 'win', 'sync');
+            scriptBinary = path.join(scriptDir, 'sync.exe');
+        } else if (Platform.isLinux) {
+            scriptName = 'sync';
+            scriptDir = path.join(pluginPath, 'dependencies', 'linux', 'sync');
+            scriptBinary = path.join(scriptDir, 'sync');
+        } else {
+            throw new Error(`Unsupported Operating System: ${navigator.platform}`);
+        }
+
+        // 3. Execution Logic
+        this.isExeRunning(scriptName).then((running) => {
+            if (running) {
+                new Notice('Already syncing');
+                return;
+            }
+            
+            this.updateSyncButtons();
+            
+            // Notification Logic
+            if (code === "sync") {
+                new Notice("Started Sync");
+            } else {
+                new Notice("Started Setup");
+            }
+
+            const args = [targetDir, pluginPath, code, SubjectPrioritization];
+
+            try {
+				const subprocess = spawn(scriptBinary, args);
+
+                // --- Universal Error Handling ---
+
+                // 1. Spawn Errors (Process failed to start)
+                subprocess.on('error', (err) => {
+                    console.error("[Bankai] Spawn Error:", err);
+                    new Notice(`Critical Error: ${err.message}`);
+                    this.updateSyncButtons();
+                });
+
+                // 2. Runtime Errors (Stderr output)
+                subprocess.stderr.on('data', (data) => {
+                    const msg = data.toString();
+                    console.error("[Bankai] Stderr:", msg);
+                    // Only notify on stderr if it's critical, otherwise it spams
+                });
+
+                // 3. Standard Output (Logs from Python)
+                subprocess.stdout.on('data', (data) => {
+                    console.log(`[Bankai] Stdout: ${data}`);
+                    this.updateSyncButtons();
+                });
+
+                // 4. Exit Handling (Process finished)
+                subprocess.on('close', (codeNumber) => {
+                    console.log(`[Bankai] Process exited with code ${codeNumber}`);
+                    
+                    if (codeNumber === 0) {
+                        const action = code === "sync" ? "Sync" : "Setup";
+                        new Notice(`Finished ${action}`);
+                        if (code === "sync") this.reloadTableView();
+                    } else {
+                        new Notice(`Process failed. Exit Code: ${codeNumber}. Check Console.`);
+                    }
+                    
+                    this.startInterval(this.settings.DownloadInterval);
+                    this.updateSyncButtons();
+                });
+
+            } catch (e) {
+                console.error("[Bankai] Execution Exception:", e);
+                new Notice(`Failed to launch: ${e instanceof Error ? e.message : String(e)}`);
+                this.updateSyncButtons();
+            }
+        });
+    }
+	private startButtonUpdateInterval() {
+		if (this.buttonUpdateIntervalId !== null) {
+			window.clearInterval(this.buttonUpdateIntervalId);
+		}
+		this.buttonUpdateIntervalId = window.setInterval(() => this.updateSyncButtons(), 10000);
+		this.registerInterval(this.buttonUpdateIntervalId);
+	}
+
+	private updateSyncButtons() {
+		this.isExeRunning('sync.exe').then((running) => {
+			const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_TABLE);
+			leaves.forEach(leaf => {
+				const view = leaf.view as TableView;
+				if (view && view.updateSyncButton) {
+					view.updateSyncButton(running);
+				}
+			});
+		});
+	}
+
+	reloadTableView() {
+		const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_TABLE);
+		leaves.forEach(leaf => {
+			const view = leaf.view as TableView;
+			if (view && view.reloadData) {
+				view.reloadData();
+			}
+		});
+	}
+
+	async getSubjects(): Promise<string[]> {
+		try {
+			const adapter = this.app.vault.adapter;
+			const pluginId = this.manifest.id;
+			const dataPath = `.obsidian/plugins/${pluginId}/dependencies/database.json`;
+			const raw = await adapter.read(dataPath);
+			const json = JSON.parse(raw);
+			return Object.keys(json).filter(key => key !== 'SyncTime');
+		} catch {
+			return [];
 		}
 	}
 
-	async setup() {}
+	showSyncModal() {
+		new SyncSelectionModal(this.app, this, (subject) => this.SyncDatabase('sync', subject)).open();
+	}
 
-	async sync() {}
-
-	decodeApiOutput(apiJson: string) {}
-
-	showSyncModal() {}
+	resetData() {
+		const vaultBasePath = (this.app.vault.adapter as any).basePath as string;
+		const pluginId = this.manifest.id;
+		const purgePath = path.join(vaultBasePath, '.obsidian', 'plugins', pluginId, 'dependencies', 'browser_data');
+		fs.rmSync(purgePath, { recursive: true, force: true });
+		new Notice('Data reset complete');
+	}
 }
 
 class TableView extends ItemView {
@@ -98,36 +276,36 @@ class TableView extends ItemView {
 		const container = this.containerEl.children[1] as HTMLElement | undefined;
 		if (!container) return;
 		container.empty();
-
+		
 		const headerDiv = container.createEl('div');
 		headerDiv.style.display = 'flex';
 		headerDiv.style.justifyContent = 'space-between';
 		headerDiv.style.alignItems = 'center';
 		headerDiv.style.marginBottom = '20px';
-
+		
 		headerDiv.createEl('h2', { text: 'Data Table' });
 
 		try {
 			this.allData = await this.loadJsonData();
 			this.filteredData = [...this.allData];
-
+			
 			const rightDiv = headerDiv.createEl('div');
 			rightDiv.style.display = 'flex';
 			rightDiv.style.alignItems = 'center';
 			rightDiv.style.gap = '15px';
-
+			
 			const syncContainer = rightDiv.createEl('div');
 			syncContainer.style.display = 'flex';
 			syncContainer.style.alignItems = 'center';
 			syncContainer.style.gap = '8px';
-
+			
 			const spinner = syncContainer.createEl('div');
 			spinner.className = 'loader';
 			spinner.style.display = 'none';
 			spinner.style.fontSize = '12px';
 			spinner.style.width = '1em';
 			spinner.style.height = '1em';
-
+			
 			const syncBtn = syncContainer.createEl('button', { text: 'Sync' });
 			this.syncButton = syncBtn;
 			this.syncButton.setAttribute('data-spinner', spinner.outerHTML);
@@ -145,11 +323,16 @@ class TableView extends ItemView {
 			syncBtn.addEventListener('mouseleave', () => {
 				syncBtn.style.backgroundColor = 'var(--interactive-accent)';
 			});
-
+			
+			// Update button state based on current sync status
+			this.plugin.isExeRunning('sync.exe').then((running) => {
+				this.updateSyncButton(running);
+			});
+			
 			const reloadBtn = rightDiv.createEl('button', { text: 'Reload' });
 			reloadBtn.style.padding = '4px 8px';
 			reloadBtn.addEventListener('click', () => this.reloadData());
-
+			
 			const syncDiv = rightDiv.createEl('div');
 			syncDiv.style.textAlign = 'right';
 			syncDiv.style.fontSize = '0.9em';
@@ -158,7 +341,7 @@ class TableView extends ItemView {
 				syncDiv.createEl('div', { text: 'Last Synced:' });
 				syncDiv.createEl('div', { text: this.syncTime });
 			}
-
+			
 			this.createControls(container);
 			this.createTable(container, this.filteredData);
 		} catch (e) {
@@ -168,13 +351,54 @@ class TableView extends ItemView {
 	}
 
 	private async loadJsonData(): Promise<Row[]> {
-		return [];
+		const adapter = this.app.vault.adapter;
+		const pluginId = this.plugin.manifest.id;
+		const dataPath = `.obsidian/plugins/${pluginId}/dependencies/database.json`;
+		const raw = await adapter.read(dataPath);
+		const json = JSON.parse(raw);
+		this.syncTime = json.SyncTime || '';
+		return this.extractFiles(json);
 	}
 
-	async reloadData() {}
+	async reloadData() {
+		try {
+			this.allData = await this.loadJsonData();
+			this.filteredData = [...this.allData];
+			this.onOpen();
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : String(e);
+			new Notice('Error reloading data: ' + msg);
+		}
+	}
 
 	private extractFiles(data: any): Row[] {
-		return [];
+		const files: Row[] = [];
+
+		const traverse = (obj: any, subject: string, curPath: string) => {
+			for (const key in obj) {
+				if (key === '__FileData__' && typeof obj[key] === 'object' && obj[key]) {
+					for (const fileName in obj[key]) {
+						files.push({
+							[COL_NAME]: fileName,
+							[COL_SUBJECT]: subject,
+							[COL_FOLDER]: curPath,
+							[COL_DATE]: String(obj[key][fileName]),
+						});
+					}
+				} else if (typeof obj[key] === 'object' && obj[key] !== null) {
+					const newPath = curPath ? `${curPath}/${key}` : key;
+					traverse(obj[key], subject, newPath);
+				}
+			}
+		};
+
+		for (const subject in data) {
+			if (subject !== 'SyncTime') {
+				traverse(data[subject], subject, subject);
+			}
+		}
+
+		return files;
 	}
 
 	private createControls(container: Element) {
@@ -254,12 +478,15 @@ class TableView extends ItemView {
 
 	private sortData(field: keyof Row) {
 		if (field === COL_DATE) {
+			// Chronological sort for dates
 			this.filteredData.sort((a, b) => {
+				// simple fallback to 0 if the date string is invalid
 				const dateA = new Date(a[field]).getTime() || 0;
 				const dateB = new Date(b[field]).getTime() || 0;
 				return dateA - dateB;
 			});
 		} else {
+			// Alphabetical sort for everything else
 			this.filteredData.sort((a, b) => a[field].localeCompare(b[field]));
 		}
 		this.updateTable();
@@ -267,12 +494,14 @@ class TableView extends ItemView {
 
 	private sortDataReverse(field: keyof Row) {
 		if (field === COL_DATE) {
+			// Convert to timestamp for correct chronological sorting
 			this.filteredData.sort((a, b) => {
 				const dateA = new Date(a[field]).getTime();
 				const dateB = new Date(b[field]).getTime();
 				return dateB - dateA;
 			});
 		} else {
+			// Use standard string sorting for other columns
 			this.filteredData.sort((a, b) => b[field].localeCompare(a[field]));
 		}
 		this.updateTable();
@@ -290,11 +519,8 @@ class TableView extends ItemView {
 	private filterByDays(days: number) {
 		const now = new Date();
 		const cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate() - days);
-		const cutoffStr = cutoff.toISOString().split('T')[0] ?? '';
-		this.filteredData = this.allData.filter((item) => {
-			const datePart = item[COL_DATE].split(' ')[0];
-			return datePart !== undefined && datePart >= cutoffStr;
-		});
+		const cutoffStr = cutoff.toISOString().split('T')[0];
+		this.filteredData = this.allData.filter((item) => item[COL_DATE].split(' ')[0] >= cutoffStr);
 		this.updateTable();
 	}
 
@@ -311,10 +537,7 @@ class TableView extends ItemView {
 			return;
 		}
 
-		const firstRow = data[0];
-		if (!firstRow) return;
-
-		const keys = Object.keys(firstRow) as (keyof Row)[];
+		const keys = Object.keys(data[0]) as (keyof Row)[];
 
 		const table = container.createEl('table');
 		table.style.width = '100%';
@@ -356,16 +579,17 @@ class TableView extends ItemView {
 
 	updateSyncButton(isLoading: boolean) {
 		if (!this.syncButton) return;
-
+		
 		const spinner = this.syncButton.parentElement?.querySelector('.loader') as HTMLElement;
 		if (!spinner) return;
-
+		
 		if (isLoading) {
 			this.syncButton.textContent = 'Syncing...';
 			this.syncButton.disabled = true;
 			this.syncButton.style.cursor = 'not-allowed';
 			spinner.style.display = 'inline-block';
-
+			
+			// Add CSS animation if not already added
 			if (!document.querySelector('#sync-spinner-style')) {
 				const style = document.createElement('style');
 				style.id = 'sync-spinner-style';
@@ -425,7 +649,8 @@ class BankaiSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.PluginEnabled)
 					.onChange(async (value) => {
 						this.plugin.settings.PluginEnabled = value;
-						await this.plugin.saveSettings();
+						await this.plugin.saveData(this.plugin.settings);
+						this.plugin.startInterval(this.plugin.settings.DownloadInterval);
 					}),
 			);
 
@@ -439,7 +664,8 @@ class BankaiSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						const minutes = parseInt(value, 10);
 						this.plugin.settings.DownloadInterval = Number.isNaN(minutes) ? DEFAULT_SETTINGS.DownloadInterval : minutes;
-						await this.plugin.saveSettings();
+						await this.plugin.saveData(this.plugin.settings);
+						this.plugin.startInterval(this.plugin.settings.DownloadInterval);
 					}),
 			);
 
@@ -452,7 +678,7 @@ class BankaiSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.DownloadDirectory)
 					.onChange(async (value) => {
 						this.plugin.settings.DownloadDirectory = value;
-						await this.plugin.saveSettings();
+						await this.plugin.saveData(this.plugin.settings);
 					}),
 			);
 
@@ -462,7 +688,7 @@ class BankaiSettingTab extends PluginSettingTab {
 			.addButton((button) => {
 				button
 					.setButtonText('Run Setup')
-					.onClick(() => this.plugin.setup());
+					.onClick(() => this.plugin.SyncDatabase('setup'));
 			});
 
 		new Setting(containerEl)
@@ -471,7 +697,87 @@ class BankaiSettingTab extends PluginSettingTab {
 			.addButton((button) =>
 				button
 					.setButtonText('Reset Data')
-					.onClick(() => {}),
+					.onClick(() => new ResetConfirmModal(this.app, () => this.plugin.resetData()).open()),
 			);
+	}
+}
+
+class SyncSelectionModal extends Modal {
+	private callback: (subject?: string) => void;
+	private plugin: Bankai;
+
+	constructor(app: App, plugin: Bankai, callback: (subject?: string) => void) {
+		super(app);
+		this.callback = callback;
+		this.plugin = plugin;
+	}
+
+	async onOpen() {
+		const { contentEl } = this;
+		contentEl.createEl('h2', { text: 'Select Sync Option' });
+
+		const buttonDiv = contentEl.createEl('div');
+		buttonDiv.style.display = 'flex';
+		buttonDiv.style.flexDirection = 'column';
+		buttonDiv.style.gap = '10px';
+		buttonDiv.style.marginTop = '20px';
+
+		const allBtn = buttonDiv.createEl('button', { text: 'Sync Whole Database' });
+		allBtn.addEventListener('click', () => {
+			this.callback();
+			this.close();
+		});
+
+		const subjects = await this.plugin.getSubjects();
+		if (subjects.length > 0) {
+			contentEl.createEl('p', { text: 'Or select a specific subject:' });
+			subjects.forEach(subject => {
+				const btn = buttonDiv.createEl('button', { text: subject });
+				btn.addEventListener('click', () => {
+					this.callback(subject);
+					this.close();
+				});
+			});
+		}
+	}
+
+	onClose() {
+		const { contentEl } = this;
+		contentEl.empty();
+	}
+}
+
+class ResetConfirmModal extends Modal {
+	private callback: () => void;
+
+	constructor(app: App, callback: () => void) {
+		super(app);
+		this.callback = callback;
+	}
+
+	onOpen() {
+		const { contentEl } = this;
+		contentEl.createEl('h2', { text: 'Are you sure?' });
+		contentEl.createEl('p', { text: 'You will have to run setup again.' });
+
+		const buttonDiv = contentEl.createEl('div');
+		buttonDiv.style.display = 'flex';
+		buttonDiv.style.gap = '10px';
+		buttonDiv.style.justifyContent = 'center';
+		buttonDiv.style.marginTop = '20px';
+
+		const yesBtn = buttonDiv.createEl('button', { text: 'Yes' });
+		yesBtn.addEventListener('click', () => {
+			this.callback();
+			this.close();
+		});
+
+		const noBtn = buttonDiv.createEl('button', { text: 'No' });
+		noBtn.addEventListener('click', () => this.close());
+	}
+
+	onClose() {
+		const { contentEl } = this;
+		contentEl.empty();
 	}
 }
