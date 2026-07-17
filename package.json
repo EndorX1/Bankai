@@ -8,7 +8,9 @@
 		"dev": "node esbuild.config.mjs",
 		"watch": "node esbuild.config.mjs",
 		"typecheck": "tsc --noEmit --skipLibCheck",
-		"build": "npm run typecheck && node esbuild.config.mjs production",
+		"build": "node esbuild.config.mjs production",
+		"copy:linux": "mkdir -p ../TestVault/.obsidian/plugins/bankai && cp main.js manifest.json styles.css ../TestVault/.obsidian/plugins/bankai/",
+		"test:linux": "npm run build && npm run copy:linux",
 		"clean": "rm -f main.js",
 		"version": "node version-bump.mjs && git add manifest.json versions.json",
 		"lint": "eslint ."

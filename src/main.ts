@@ -1,477 +1,235 @@
-import { App, ItemView, Plugin, WorkspaceLeaf, PluginSettingTab, Setting, Notice } from 'obsidian';
+import {
+	Editor,
+	MarkdownView,
+	MarkdownFileInfo,
+	Modal,
+	Notice,
+	Plugin,
+    Platform,
+} from 'obsidian';
+import {
+	DEFAULT_SETTINGS,
+	BankaiSettingTab,
+    BankaiSettings,
+} from './settings';
+import { 
+    spawn, 
+    exec,
+} from 'child_process';
+import * as path from 'path';
 
-const VIEW_TYPE_TABLE = 'table-view' as const;
-
-interface PluginSettings {
-	DownloadInterval: number;
-	DownloadDirectory: string;
-	PluginEnabled: boolean;
-}
-
-const DEFAULT_SETTINGS: PluginSettings = {
-	DownloadInterval: 10,
-	DownloadDirectory: '',
-	PluginEnabled: true,
-};
-
-const COL_NAME = 'Name of the file';
-const COL_SUBJECT = 'Subject';
-const COL_FOLDER = 'Folder Path to the file';
-const COL_DATE = 'Date Added';
-
-type Row = Record<typeof COL_NAME | typeof COL_SUBJECT | typeof COL_FOLDER | typeof COL_DATE, string>;
+// Remember to rename these classes and interfaces!
 
 export default class Bankai extends Plugin {
-	settings!: PluginSettings;
+	settings!: BankaiSettings; 
 
+    // Timer
+    private timerId: number | null = null;
+    private readonly intervalMs = this.settings.DownloadInterval;
+
+    public startTimer(): void {
+        // Start the automated loop
+        this.timerId = window.setInterval(() => this.intervalMs);
+    }
+
+    private resetTimer(): void {
+        if (this.timerId !== null) {
+            window.clearInterval(this.timerId);
+        }
+        this.startTimer();
+    }
+
+    public stopTimer(): void {
+        if (this.timerId !== null) {
+            window.clearInterval(this.timerId);
+            this.timerId = null;
+        }
+    }
+    
 	async onload() {
 		await this.loadSettings();
-
-		this.addCommand({ id: 'SyncDB', name: 'Sync Database', callback: () => this.showSyncModal() });
-
-		this.registerView(VIEW_TYPE_TABLE, (leaf) => new TableView(leaf, this));
+        this.startTimer
 
 		this.addRibbonIcon('table', 'Open Database Searcher', () => {
-			this.activateView();
+			this.activateTableView();
 		});
 
-		this.addSettingTab(new BankaiSettingTab(this.app, this));
+		// This adds a simple command that can be triggered anywhere
+		this.addCommand({
+			id: 'SyncDB',
+			name: 'Sync Database',
+			callback: () => {
+				this.bankaiSync();
+			},
+		});
+
+        this.addSettingTab(new BankaiSettingTab(this.app, this));
+
+        this.addCommand({
+            id: 'open-input-modal',
+            name: 'Bankai Open Input Modal',
+            callback: () => {
+                new BankaiModal(this.app).open();
+            }
+        });
+
 	}
 
 	onunload() {}
 
-	private async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+	async loadSettings() {
+		this.settings = Object.assign(
+			{},
+			DEFAULT_SETTINGS,
+			(await this.loadData()) as Partial<BankaiSettings>,
+		);
 	}
 
 	async saveSettings() {
 		await this.saveData(this.settings);
 	}
 
-	async isExeRunning(exeName: string): Promise<boolean> {
-		return false;
-	}
+    async bankaiInit() {
+        const vaultBasePath = (this.app.vault.adapter as any).basePath as string;
+        const pluginId = this.manifest.id;
+        const pluginPath = path.join(vaultBasePath, '.obsidian', 'plugins', pluginId);
+        const scriptBin = (() => {
+            if (Platform.isWin) {
+                const scriptName = 'bankai-init.exe';
+                return path.join(pluginPath, scriptName);
+            } else if (Platform.isLinux) {
+                const scriptName = 'bankai-init';
+                return path.join(pluginPath, scriptName);
+            } else {
+                throw new Error(`Unsupported Operating System: ${navigator.platform}`);
+            }
+        })();
 
-	async activateView() {
-		const { workspace } = this.app;
-		const leaves = workspace.getLeavesOfType(VIEW_TYPE_TABLE);
+        try {
+            //TODO
+            const subprocess = spawn(scriptBin, ["-P", "", "-p", pluginPath]);
+            this.updateButtonIsSyncing(true);
 
-		const existingLeaf = leaves.length > 0 ? leaves[0] ?? null : null;
-		const newLeaf = workspace.getRightLeaf(false);
-		let leaf: WorkspaceLeaf | null = existingLeaf ?? newLeaf ?? null;
-		if (leaf) {
-			await leaf.setViewState({ type: VIEW_TYPE_TABLE, active: true });
-			workspace.revealLeaf(leaf);
-		}
-	}
+            // 1. Spawn Errors (Process failed to start)
+            subprocess.on('error', (err: Error) => {
+                console.error("[Bankai] Spawn Error(initialize):", err);
+                new Notice(`Critical Error: ${err.message}`);
+            });
 
-	async setup() {}
+            // 2. Runtime Errors (Stderr output)
+            subprocess.stderr.on('data', (data: Error) => {
+                const msg = data.toString();
+                console.error("[Bankai] Stderr(initialize):", msg);
+                // Only notify on stderr if it's critical, otherwise it spams
+            });
 
-	async sync() {}
+            // 3. Standard Output (Logs from Python)
+            subprocess.stdout.on('data', (data: string) => {
+                console.log(`[Bankai] Stdout(initialize): ${data}`);
+            });
 
-	decodeApiOutput(apiJson: string) {}
+            // 4. Exit Handling (Process finished)
+            subprocess.on('close', (codeNumber: number) => {
+                console.log(`[Bankai] Process exited with code ${codeNumber} on Process initialize`);
+                
+                if (codeNumber === 0) {
+                    this.updateButtonIsSyncing(false);
+                    new Notice(`Finished Initializing`);
+                } else {
+                    new Notice(`initialization failed. Exit Code: ${codeNumber}. Check Console.`);
+                }
+        });
 
-	showSyncModal() {}
+        } catch (e) {
+            console.error("[Bankai] Execution Exception:", e);
+            new Notice(`Failed to initialize: ${e instanceof Error ? e.message : String(e)}`);
+        }
+        
+    }
+
+    async updateButtonIsSyncing(running: boolean) {
+        new Notice('Bankai Reset Under Construction');
+    }
+
+    async bankaiSync() {
+        new Notice('Syncing...');
+        this.stopTimer
+
+        const vaultBasePath = (this.app.vault.adapter as any).basePath as string;
+        const pluginId = this.manifest.id;
+        const pluginPath = path.join(vaultBasePath, '.obsidian', 'plugins', pluginId);
+        const targetDir = path.join(vaultBasePath, this.settings.DownloadDirectory);
+        const scriptBin = (() => {
+            if (Platform.isWin) {
+                const scriptName = 'bankai-sync.exe';
+                return path.join(pluginPath, scriptName);
+            } else if (Platform.isLinux) {
+                const scriptName = 'bankai-sync';
+                return path.join(pluginPath, scriptName);
+            } else {
+                throw new Error(`Unsupported Operating System: ${navigator.platform}`);
+            }
+        })();
+
+        try {
+            const subprocess = spawn(scriptBin, ["-p", pluginPath, "-r", targetDir]);
+            this.updateButtonIsSyncing(true);
+
+            // 1. Spawn Errors (Process failed to start)
+            subprocess.on('error', (err: Error) => {
+                console.error("[Bankai] Spawn Error(Sync):", err);
+                new Notice(`Critical Error: ${err.message}`);
+                this.updateButtonIsSyncing(false);
+            });
+
+            // 2. Runtime Errors (Stderr output)
+            subprocess.stderr.on('data', (data: Error) => {
+                const msg = data.toString();
+                console.error("[Bankai] Stderr(Sync):", msg);
+                // Only notify on stderr if it's critical, otherwise it spams
+            });
+
+            // 3. Standard Output (Logs from Python)
+            subprocess.stdout.on('data', (data: string) => {
+                console.log(`[Bankai] Stdout(Sync): ${data}`);
+            });
+
+            // 4. Exit Handling (Process finished)
+            subprocess.on('close', (codeNumber: number) => {
+                console.log(`[Bankai] Process exited with code ${codeNumber} on Process Sync`);
+                
+                if (codeNumber === 0) {
+                    this.updateButtonIsSyncing(false);
+                    new Notice(`Finished Syncing`);
+                } else {
+                    new Notice(`Process failed. Exit Code: ${codeNumber}. Check Console.`);
+                }
+                
+                this.startTimer
+                this.updateButtonIsSyncing(false);
+        });
+
+    } catch (e) {
+        console.error("[Bankai] Execution Exception:", e);
+        new Notice(`Failed to launch: ${e instanceof Error ? e.message : String(e)}`);
+        this.updateButtonIsSyncing(false);
+    }
+    }
+
+    activateTableView() {
+        new Notice('Bankai Table View Under Construction');
+    }
+
 }
 
-class TableView extends ItemView {
-	private plugin: Bankai;
-	private allData: Row[] = [];
-	private filteredData: Row[] = [];
-	private syncTime: string = '';
-	private syncButton: HTMLButtonElement | null = null;
-
-	constructor(leaf: WorkspaceLeaf, plugin: Bankai) {
-		super(leaf);
-		this.plugin = plugin;
+class BankaiModal extends Modal {
+	onOpen() {
+		const { contentEl } = this;
+		contentEl.setText('Woah!');
 	}
 
-	getViewType() {
-		return VIEW_TYPE_TABLE;
-	}
-
-	getDisplayText() {
-		return 'Table View';
-	}
-
-	async onOpen() {
-		const container = this.containerEl.children[1] as HTMLElement | undefined;
-		if (!container) return;
-		container.empty();
-
-		const headerDiv = container.createEl('div');
-		headerDiv.style.display = 'flex';
-		headerDiv.style.justifyContent = 'space-between';
-		headerDiv.style.alignItems = 'center';
-		headerDiv.style.marginBottom = '20px';
-
-		headerDiv.createEl('h2', { text: 'Data Table' });
-
-		try {
-			this.allData = await this.loadJsonData();
-			this.filteredData = [...this.allData];
-
-			const rightDiv = headerDiv.createEl('div');
-			rightDiv.style.display = 'flex';
-			rightDiv.style.alignItems = 'center';
-			rightDiv.style.gap = '15px';
-
-			const syncContainer = rightDiv.createEl('div');
-			syncContainer.style.display = 'flex';
-			syncContainer.style.alignItems = 'center';
-			syncContainer.style.gap = '8px';
-
-			const spinner = syncContainer.createEl('div');
-			spinner.className = 'loader';
-			spinner.style.display = 'none';
-			spinner.style.fontSize = '12px';
-			spinner.style.width = '1em';
-			spinner.style.height = '1em';
-
-			const syncBtn = syncContainer.createEl('button', { text: 'Sync' });
-			this.syncButton = syncBtn;
-			this.syncButton.setAttribute('data-spinner', spinner.outerHTML);
-			syncBtn.style.padding = '6px 12px';
-			syncBtn.style.backgroundColor = 'var(--interactive-accent)';
-			syncBtn.style.color = 'var(--text-on-accent)';
-			syncBtn.style.border = 'none';
-			syncBtn.style.borderRadius = '4px';
-			syncBtn.style.cursor = 'pointer';
-			syncBtn.style.fontWeight = '500';
-			syncBtn.addEventListener('click', () => this.plugin.showSyncModal());
-			syncBtn.addEventListener('mouseenter', () => {
-				syncBtn.style.backgroundColor = 'var(--interactive-accent-hover)';
-			});
-			syncBtn.addEventListener('mouseleave', () => {
-				syncBtn.style.backgroundColor = 'var(--interactive-accent)';
-			});
-
-			const reloadBtn = rightDiv.createEl('button', { text: 'Reload' });
-			reloadBtn.style.padding = '4px 8px';
-			reloadBtn.addEventListener('click', () => this.reloadData());
-
-			const syncDiv = rightDiv.createEl('div');
-			syncDiv.style.textAlign = 'right';
-			syncDiv.style.fontSize = '0.9em';
-			syncDiv.style.color = 'var(--text-muted)';
-			if (this.syncTime) {
-				syncDiv.createEl('div', { text: 'Last Synced:' });
-				syncDiv.createEl('div', { text: this.syncTime });
-			}
-
-			this.createControls(container);
-			this.createTable(container, this.filteredData);
-		} catch (e) {
-			const msg = e instanceof Error ? e.message : String(e);
-			container.createEl('p', { text: 'Error loading data: ' + msg });
-		}
-	}
-
-	private async loadJsonData(): Promise<Row[]> {
-		return [];
-	}
-
-	async reloadData() {}
-
-	private extractFiles(data: any): Row[] {
-		return [];
-	}
-
-	private createControls(container: Element) {
-		const controlsDiv = container.createEl('div');
-		controlsDiv.style.marginBottom = '20px';
-
-		const searchInput = controlsDiv.createEl('input');
-		searchInput.type = 'text';
-		searchInput.placeholder = 'Search files...';
-		searchInput.style.width = '100%';
-		searchInput.style.padding = '8px';
-		searchInput.style.marginBottom = '10px';
-		searchInput.addEventListener('input', () => this.filterData(searchInput.value));
-
-		const buttonsDiv = controlsDiv.createEl('div');
-		buttonsDiv.style.marginBottom = '10px';
-		const nameBtn = buttonsDiv.createEl('button', { text: 'Sort by Name' });
-		nameBtn.style.marginRight = '10px';
-		nameBtn.addEventListener('click', () => this.sortData(COL_NAME));
-
-		const subjectBtn = buttonsDiv.createEl('button', { text: 'Sort by Subject' });
-		subjectBtn.addEventListener('click', () => this.sortData(COL_SUBJECT));
-
-		const timeBtn = buttonsDiv.createEl('button', { text: 'Sort by Time' });
-		timeBtn.style.marginLeft = '10px';
-		timeBtn.addEventListener('click', () => this.sortDataReverse(COL_DATE));
-
-		const subjectButtonsDiv = controlsDiv.createEl('div');
-		subjectButtonsDiv.style.marginBottom = '10px';
-		const subjects = [...new Set(this.allData.map((item) => item[COL_SUBJECT]))];
-
-		const allBtn = subjectButtonsDiv.createEl('button', { text: 'All' });
-		allBtn.style.marginRight = '10px';
-		allBtn.addEventListener('click', () => this.filterBySubject(''));
-
-		subjects.forEach((subject) => {
-			const btn = subjectButtonsDiv.createEl('button', { text: subject });
-			btn.style.marginRight = '10px';
-			btn.addEventListener('click', () => this.filterBySubject(subject));
-		});
-
-		const timeButtonsDiv = controlsDiv.createEl('div');
-
-		const todayBtn = timeButtonsDiv.createEl('button', { text: 'Today' });
-		todayBtn.style.marginRight = '10px';
-		todayBtn.addEventListener('click', () => this.filterByDays(0));
-
-		const daysLabel = timeButtonsDiv.createEl('span', { text: 'Last Days:' });
-		daysLabel.style.marginRight = '5px';
-
-		const daysInput = timeButtonsDiv.createEl('input');
-		daysInput.type = 'number';
-		daysInput.placeholder = '7';
-		daysInput.style.width = '50px';
-		daysInput.style.marginRight = '5px';
-		daysInput.style.marginLeft = '10px';
-		daysInput.addEventListener('input', () => {
-			const days = parseInt(daysInput.value, 10);
-			if (!Number.isNaN(days)) this.filterByDays(days);
-		});
-	}
-
-	private filterData(searchTerm: string) {
-		const term = searchTerm.trim().toLowerCase();
-		if (!term) {
-			this.filteredData = [...this.allData];
-		} else {
-			this.filteredData = this.allData.filter((item) =>
-				item[COL_NAME].toLowerCase().includes(term) ||
-				item[COL_SUBJECT].toLowerCase().includes(term) ||
-				item[COL_FOLDER].toLowerCase().includes(term) ||
-				item[COL_DATE].toLowerCase().includes(term),
-			);
-		}
-		this.updateTable();
-	}
-
-	private sortData(field: keyof Row) {
-		if (field === COL_DATE) {
-			this.filteredData.sort((a, b) => {
-				const dateA = new Date(a[field]).getTime() || 0;
-				const dateB = new Date(b[field]).getTime() || 0;
-				return dateA - dateB;
-			});
-		} else {
-			this.filteredData.sort((a, b) => a[field].localeCompare(b[field]));
-		}
-		this.updateTable();
-	}
-
-	private sortDataReverse(field: keyof Row) {
-		if (field === COL_DATE) {
-			this.filteredData.sort((a, b) => {
-				const dateA = new Date(a[field]).getTime();
-				const dateB = new Date(b[field]).getTime();
-				return dateB - dateA;
-			});
-		} else {
-			this.filteredData.sort((a, b) => b[field].localeCompare(a[field]));
-		}
-		this.updateTable();
-	}
-
-	private filterBySubject(subject: string) {
-		if (!subject) {
-			this.filteredData = [...this.allData];
-		} else {
-			this.filteredData = this.allData.filter((item) => item[COL_SUBJECT] === subject);
-		}
-		this.updateTable();
-	}
-
-	private filterByDays(days: number) {
-		const now = new Date();
-		const cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate() - days);
-		const cutoffStr = cutoff.toISOString().split('T')[0] ?? '';
-		this.filteredData = this.allData.filter((item) => {
-			const datePart = item[COL_DATE].split(' ')[0];
-			return datePart !== undefined && datePart >= cutoffStr;
-		});
-		this.updateTable();
-	}
-
-	private updateTable() {
-		const container = this.containerEl.children[1] as HTMLElement | undefined;
-		if (!container) return;
-		const existing = container.querySelector('table');
-		if (existing) existing.remove();
-		this.createTable(container, this.filteredData);
-	}
-
-	private createTable(container: Element, data: Row[]) {
-		if (!data || data.length === 0) {
-			return;
-		}
-
-		const firstRow = data[0];
-		if (!firstRow) return;
-
-		const keys = Object.keys(firstRow) as (keyof Row)[];
-
-		const table = container.createEl('table');
-		table.style.width = '100%';
-		table.style.borderCollapse = 'collapse';
-
-		const thead = table.createEl('thead');
-		const headerRow = thead.createEl('tr');
-		keys.forEach((key) => {
-			const th = headerRow.createEl('th');
-			th.textContent = key as string;
-			th.style.border = '1px solid var(--background-modifier-border)';
-			th.style.padding = '8px';
-			th.style.backgroundColor = 'var(--background-secondary)';
-		});
-
-		const tbody = table.createEl('tbody');
-		data.forEach((row) => {
-			const tr = tbody.createEl('tr');
-			keys.forEach((key) => {
-				const td = tr.createEl('td');
-				td.textContent = row[key];
-				td.style.border = '1px solid var(--background-modifier-border)';
-				td.style.padding = '8px';
-
-				if (key === COL_NAME) {
-					td.style.cursor = 'pointer';
-					td.style.color = 'var(--text-accent)';
-					td.addEventListener('click', () => {
-						const fullPath = `${row[COL_FOLDER]}/${row[key]}`;
-						navigator.clipboard.writeText(fullPath);
-						new Notice('Copied path to clipboard');
-					});
-				}
-			});
-		});
-
-		container.appendChild(table);
-	}
-
-	updateSyncButton(isLoading: boolean) {
-		if (!this.syncButton) return;
-
-		const spinner = this.syncButton.parentElement?.querySelector('.loader') as HTMLElement;
-		if (!spinner) return;
-
-		if (isLoading) {
-			this.syncButton.textContent = 'Syncing...';
-			this.syncButton.disabled = true;
-			this.syncButton.style.cursor = 'not-allowed';
-			spinner.style.display = 'inline-block';
-
-			if (!document.querySelector('#sync-spinner-style')) {
-				const style = document.createElement('style');
-				style.id = 'sync-spinner-style';
-				style.textContent = `
-					.loader {
-						color: var(--text-accent);
-						text-indent: -9999em;
-						overflow: hidden;
-						border-radius: 50%;
-						position: relative;
-						transform: translateZ(0);
-						animation: mltShdSpin 2s infinite ease, round 2s infinite ease;
-					}
-					@keyframes mltShdSpin {
-						0% { box-shadow: 0 -0.83em 0 -0.4em, 0 -0.83em 0 -0.42em, 0 -0.83em 0 -0.44em, 0 -0.83em 0 -0.46em, 0 -0.83em 0 -0.477em; }
-						5%, 95% { box-shadow: 0 -0.83em 0 -0.4em, 0 -0.83em 0 -0.42em, 0 -0.83em 0 -0.44em, 0 -0.83em 0 -0.46em, 0 -0.83em 0 -0.477em; }
-						10%, 59% { box-shadow: 0 -0.83em 0 -0.4em, -0.087em -0.825em 0 -0.42em, -0.173em -0.812em 0 -0.44em, -0.256em -0.789em 0 -0.46em, -0.297em -0.775em 0 -0.477em; }
-						20% { box-shadow: 0 -0.83em 0 -0.4em, -0.338em -0.758em 0 -0.42em, -0.555em -0.617em 0 -0.44em, -0.671em -0.488em 0 -0.46em, -0.749em -0.34em 0 -0.477em; }
-						38% { box-shadow: 0 -0.83em 0 -0.4em, -0.377em -0.74em 0 -0.42em, -0.645em -0.522em 0 -0.44em, -0.775em -0.297em 0 -0.46em, -0.82em -0.09em 0 -0.477em; }
-						100% { box-shadow: 0 -0.83em 0 -0.4em, 0 -0.83em 0 -0.42em, 0 -0.83em 0 -0.44em, 0 -0.83em 0 -0.46em, 0 -0.83em 0 -0.477em; }
-					}
-					@keyframes round {
-						0% { transform: rotate(0deg) }
-						100% { transform: rotate(360deg) }
-					}
-				`;
-				document.head.appendChild(style);
-			}
-		} else {
-			this.syncButton.textContent = 'Sync';
-			this.syncButton.disabled = false;
-			this.syncButton.style.cursor = 'pointer';
-			spinner.style.display = 'none';
-		}
-	}
-
-	async onClose() {}
-}
-
-class BankaiSettingTab extends PluginSettingTab {
-	private plugin: Bankai;
-
-	constructor(app: App, plugin: Bankai) {
-		super(app, plugin);
-		this.plugin = plugin;
-	}
-
-	display(): void {
-		const { containerEl } = this;
-		containerEl.empty();
-
-		new Setting(containerEl)
-			.setName('Enable')
-			.setDesc('Enables Plugin')
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.PluginEnabled)
-					.onChange(async (value) => {
-						this.plugin.settings.PluginEnabled = value;
-						await this.plugin.saveSettings();
-					}),
-			);
-
-		new Setting(containerEl)
-			.setName('Download Interval (min)')
-			.setDesc('Time interval to update file database')
-			.addText((text) =>
-				text
-					.setPlaceholder('Minutes')
-					.setValue(String(this.plugin.settings.DownloadInterval))
-					.onChange(async (value) => {
-						const minutes = parseInt(value, 10);
-						this.plugin.settings.DownloadInterval = Number.isNaN(minutes) ? DEFAULT_SETTINGS.DownloadInterval : minutes;
-						await this.plugin.saveSettings();
-					}),
-			);
-
-		new Setting(containerEl)
-			.setName('Directory')
-			.setDesc('File saving location')
-			.addText((text) =>
-				text
-					.setPlaceholder('')
-					.setValue(this.plugin.settings.DownloadDirectory)
-					.onChange(async (value) => {
-						this.plugin.settings.DownloadDirectory = value;
-						await this.plugin.saveSettings();
-					}),
-			);
-
-		new Setting(containerEl)
-			.setName('Run Setup')
-			.setDesc('Initialize the plugin and download dependencies')
-			.addButton((button) => {
-				button
-					.setButtonText('Run Setup')
-					.onClick(() => this.plugin.setup());
-			});
-
-		new Setting(containerEl)
-			.setName('Reset Data')
-			.setDesc('Clear browser data and cookies. If you experience problems, try this.')
-			.addButton((button) =>
-				button
-					.setButtonText('Reset Data')
-					.onClick(() => {}),
-			);
+	onClose() {
+		const { contentEl } = this;
+		contentEl.empty();
 	}
 }

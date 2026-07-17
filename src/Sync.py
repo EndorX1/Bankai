@@ -1,14 +1,17 @@
 import json
 import subprocess as sp
-import os 
+import os
+import argparse
+import sys
 
-dataPath = os.path.join("subjectsNew.json")
-rclone_conf = os.path.join("rclone.conf")
-
-parser = argparse.ArgumentParser(prog="Bankai API", description="API for File synced Filesystems")
+parser = argparse.ArgumentParser(prog="Bankai Sync script", description="Handles the syncing of files from the remote to the local database")
 parser.add_argument("-r", "--root", help="Root folder for the database", default=os.path.abspath(os.getcwd()))
+parser.add_argument("-p", "--plugin", help="Path to the plugin folder", default=os.path.abspath(os.getcwd()))
 
 parsed_args = parser.parse_args(sys.argv[1:])
+
+dataPath = os.path.join(parsed_args.plugin, "subjects.json")
+rclone_conf = os.path.join(parsed_args.plugin, "rclone.conf")
 
 def convert(proc):
     if proc.stdout:

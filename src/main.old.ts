@@ -72,7 +72,7 @@ export default class Bankai extends Plugin {
                     resolve(false);
                     return;
                 }
-                const running = stdout.toLowerCase().includes(exeName.toLowerCase());
+                const running = stdout.includes(exeName);
                 resolve(running);
             });
         });

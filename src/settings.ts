@@ -1,16 +1,16 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import Bankai from './main';
 
-export interface PluginSettings {
+export interface BankaiSettings {
 	DownloadInterval: number;
 	DownloadDirectory: string;
 	PluginEnabled: boolean;
 }
 
-export const DEFAULT_SETTINGS: PluginSettings = {
+export const DEFAULT_SETTINGS: BankaiSettings = {
 	DownloadInterval: 10,
 	DownloadDirectory: '',
-	PluginEnabled: true,
+	PluginEnabled: false,
 };
 
 export class BankaiSettingTab extends PluginSettingTab {
@@ -66,5 +66,14 @@ export class BankaiSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					}),
 			);
+
+		new Setting(containerEl)
+			.setName('Initialize / Update')
+			.setDesc('Initialize the plugin, download dependencies or Update if possible\nRefetch browser cookies. If you experience problems, try this.')
+			.addButton((button) => {
+				button
+					.setButtonText('Run Setup')
+					.onClick(() => this.plugin.bankaiInit());
+			});
 	}
 }
