@@ -1,5 +1,5 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
-import Bankai from './main';
+import Bankai, { InputConfidentialData } from './main';
 
 export interface BankaiSettings {
 	DownloadInterval: number;
@@ -35,6 +35,11 @@ export class BankaiSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.PluginEnabled = value;
 						await this.plugin.saveSettings();
+						if (value) {
+							this.plugin.startTimer();
+						} else {
+							this.plugin.stopTimer();
+						}
 					}),
 			);
 
@@ -75,5 +80,16 @@ export class BankaiSettingTab extends PluginSettingTab {
 					.setButtonText('Run Setup')
 					.onClick(() => this.plugin.bankaiInit());
 			});
+
+		new Setting(containerEl)
+			.setName('Set Secure Login Data')
+			.setDesc('Input the administrative password and service account details required for synchronization.')
+            .addButton((btn) =>
+                btn 
+                    .setButtonText("Open Window")
+                    .onClick(() => {
+						this.plugin.handleInputWindow()
+                    })
+            );
 	}
 }

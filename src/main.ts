@@ -6,6 +6,8 @@ import {
 	Notice,
 	Plugin,
     Platform,
+    Setting,
+    App,
 } from 'obsidian';
 import {
 	DEFAULT_SETTINGS,
@@ -18,18 +20,75 @@ import {
 } from 'child_process';
 import * as path from 'path';
 
-// Remember to rename these classes and interfaces!
+export class InputConfidentialData extends Modal {
+    private adminPassword: string;
+    private sEmail: string;
+    private sPassword: string;
+    private onSubmit: (adminPassword: string, sEmail: string, sPassword: string) => void;
+
+    constructor(app: App, onSubmit: (adminPassword: string, sEmail: string, sPassword: string) => void) {
+        super(app)
+        this.onSubmit = onSubmit;
+        this.adminPassword = ""
+        this.sEmail = ""
+        this.sPassword = ""
+    }
+
+	onOpen() {
+		const { contentEl } = this;
+		contentEl.createEl("h1", { text: "User Data Input" });
+        
+        new Setting(contentEl)
+            .setName("Admin Password")
+            .addText((t1) =>
+                t1.onChange((v1) => {
+                    this.adminPassword = v1;
+                })
+            );
+        
+        new Setting(contentEl)
+            .setName("Microsoft Email")
+            .addText((t2) =>
+                t2.onChange((v2) => {
+                    this.sEmail = v2
+                })
+            );
+
+        new Setting(contentEl)
+            .setName("Microsoft Password")
+            .addText((t3) =>
+                t3.onChange((v3) => {
+                    this.sPassword = v3;
+                })
+            );
+
+        new Setting(contentEl)
+            .addButton((btn) =>
+                btn 
+                    .setButtonText("Submit")
+                    .onClick(() => {
+                        this.close();
+                        this.onSubmit(this.adminPassword, this.sEmail, this.sPassword);
+                    })
+            );
+	}
+
+	onClose() {
+		const { contentEl } = this;
+		contentEl.empty();
+	}
+}
 
 export default class Bankai extends Plugin {
 	settings!: BankaiSettings; 
 
     // Timer
     private timerId: number | null = null;
-    private readonly intervalMs = this.settings.DownloadInterval;
 
     public startTimer(): void {
         // Start the automated loop
-        this.timerId = window.setInterval(() => this.intervalMs);
+        const intervalMs = this.settings.DownloadInterval * 60 * 1000; // Convert minutes to milliseconds
+        this.timerId = window.setInterval(() => this.bankaiSync, intervalMs);
     }
 
     private resetTimer(): void {
@@ -48,7 +107,7 @@ export default class Bankai extends Plugin {
     
 	async onload() {
 		await this.loadSettings();
-        this.startTimer
+        this.startTimer();
 
 		this.addRibbonIcon('table', 'Open Database Searcher', () => {
 			this.activateTableView();
@@ -64,14 +123,6 @@ export default class Bankai extends Plugin {
 		});
 
         this.addSettingTab(new BankaiSettingTab(this.app, this));
-
-        this.addCommand({
-            id: 'open-input-modal',
-            name: 'Bankai Open Input Modal',
-            callback: () => {
-                new BankaiModal(this.app).open();
-            }
-        });
 
 	}
 
@@ -145,6 +196,7 @@ export default class Bankai extends Plugin {
             new Notice(`Failed to initialize: ${e instanceof Error ? e.message : String(e)}`);
         }
         
+        this.handleInputWindow()
     }
 
     async updateButtonIsSyncing(running: boolean) {
@@ -216,20 +268,16 @@ export default class Bankai extends Plugin {
     }
     }
 
-    activateTableView() {
+    async activateTableView() {
         new Notice('Bankai Table View Under Construction');
     }
 
+    //TODO Fuck as cursed and does absolutely nothing
+    async handleInputWindow() {
+        new InputConfidentialData(this.app, (adminPassword: string, sEmail: string, sPassword: string) => {
+            return({adminPassword, sEmail, sPassword});
+        }).open();
+
+
 }
-
-class BankaiModal extends Modal {
-	onOpen() {
-		const { contentEl } = this;
-		contentEl.setText('Woah!');
-	}
-
-	onClose() {
-		const { contentEl } = this;
-		contentEl.empty();
-	}
 }

@@ -1,1 +1,2 @@
 https://eduzh-my.sharepoint.com/personal/elia_constam_mng_ch/Documents/
+echo "your_cleartext_password" | rclone obscure -
