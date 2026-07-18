@@ -21,46 +21,51 @@ import {
 import * as path from 'path';
 
 export class InputConfidentialData extends Modal {
-    private adminPassword: string;
-    private sEmail: string;
-    private sPassword: string;
+    private adminPassword = "";
+    private sEmail = "";
+    private sPassword = "";
+    private mode: string;
     private onSubmit: (adminPassword: string, sEmail: string, sPassword: string) => void;
 
-    constructor(app: App, onSubmit: (adminPassword: string, sEmail: string, sPassword: string) => void) {
-        super(app)
+    constructor(app: App, mode: string, onSubmit: (adminPassword: string, sEmail: string, sPassword: string) => void) {
+        super(app);
+        this.mode = mode;
         this.onSubmit = onSubmit;
-        this.adminPassword = ""
-        this.sEmail = ""
-        this.sPassword = ""
     }
 
-	onOpen() {
-		const { contentEl } = this;
-		contentEl.createEl("h1", { text: "User Data Input" });
+    onOpen() {
+        const { contentEl } = this;
+        contentEl.createEl("h1", { text: "User Data Input" });
         
-        new Setting(contentEl)
-            .setName("Admin Password")
-            .addText((t1) =>
-                t1.onChange((v1) => {
-                    this.adminPassword = v1;
-                })
-            );
+        // Render Admin Password field for specific modes (e.g., '0' Initialize all, '2' Update Dependencies)
+        if (this.mode === '0' || this.mode === '2') {
+            new Setting(contentEl)
+                .setName("Admin Password")
+                .addText((text) =>
+                    text.onChange((value) => {
+                        this.adminPassword = value;
+                    })
+                );
+        }
         
-        new Setting(contentEl)
-            .setName("Microsoft Email")
-            .addText((t2) =>
-                t2.onChange((v2) => {
-                    this.sEmail = v2
-                })
-            );
+        // Render Microsoft Credentials for specific modes (e.g., '0' Initialize all, '3' Update Credentials)
+        if (this.mode === '0' || this.mode === '3') {
+            new Setting(contentEl)
+                .setName("Microsoft Email")
+                .addText((text) =>
+                    text.onChange((value) => {
+                        this.sEmail = value;
+                    })
+                );
 
-        new Setting(contentEl)
-            .setName("Microsoft Password")
-            .addText((t3) =>
-                t3.onChange((v3) => {
-                    this.sPassword = v3;
-                })
-            );
+            new Setting(contentEl)
+                .setName("Microsoft Password")
+                .addText((text) =>
+                    text.onChange((value) => {
+                        this.sPassword = value;
+                    })
+                );
+        }
 
         new Setting(contentEl)
             .addButton((btn) =>
@@ -71,12 +76,12 @@ export class InputConfidentialData extends Modal {
                         this.onSubmit(this.adminPassword, this.sEmail, this.sPassword);
                     })
             );
-	}
+    }
 
-	onClose() {
-		const { contentEl } = this;
-		contentEl.empty();
-	}
+    onClose() {
+        const { contentEl } = this;
+        contentEl.empty();
+    }
 }
 
 export default class Bankai extends Plugin {
@@ -140,65 +145,6 @@ export default class Bankai extends Plugin {
 		await this.saveData(this.settings);
 	}
 
-    async bankaiInit() {
-        const vaultBasePath = (this.app.vault.adapter as any).basePath as string;
-        const pluginId = this.manifest.id;
-        const pluginPath = path.join(vaultBasePath, '.obsidian', 'plugins', pluginId);
-        const scriptBin = (() => {
-            if (Platform.isWin) {
-                const scriptName = 'bankai-init.exe';
-                return path.join(pluginPath, scriptName);
-            } else if (Platform.isLinux) {
-                const scriptName = 'bankai-init';
-                return path.join(pluginPath, scriptName);
-            } else {
-                throw new Error(`Unsupported Operating System: ${navigator.platform}`);
-            }
-        })();
-
-        try {
-            //TODO
-            const subprocess = spawn(scriptBin, ["-P", "", "-p", pluginPath]);
-            this.updateButtonIsSyncing(true);
-
-            // 1. Spawn Errors (Process failed to start)
-            subprocess.on('error', (err: Error) => {
-                console.error("[Bankai] Spawn Error(initialize):", err);
-                new Notice(`Critical Error: ${err.message}`);
-            });
-
-            // 2. Runtime Errors (Stderr output)
-            subprocess.stderr.on('data', (data: Error) => {
-                const msg = data.toString();
-                console.error("[Bankai] Stderr(initialize):", msg);
-                // Only notify on stderr if it's critical, otherwise it spams
-            });
-
-            // 3. Standard Output (Logs from Python)
-            subprocess.stdout.on('data', (data: string) => {
-                console.log(`[Bankai] Stdout(initialize): ${data}`);
-            });
-
-            // 4. Exit Handling (Process finished)
-            subprocess.on('close', (codeNumber: number) => {
-                console.log(`[Bankai] Process exited with code ${codeNumber} on Process initialize`);
-                
-                if (codeNumber === 0) {
-                    this.updateButtonIsSyncing(false);
-                    new Notice(`Finished Initializing`);
-                } else {
-                    new Notice(`initialization failed. Exit Code: ${codeNumber}. Check Console.`);
-                }
-        });
-
-        } catch (e) {
-            console.error("[Bankai] Execution Exception:", e);
-            new Notice(`Failed to initialize: ${e instanceof Error ? e.message : String(e)}`);
-        }
-        
-        this.handleInputWindow()
-    }
-
     async updateButtonIsSyncing(running: boolean) {
         new Notice('Bankai Reset Under Construction');
     }
@@ -235,15 +181,15 @@ export default class Bankai extends Plugin {
             });
 
             // 2. Runtime Errors (Stderr output)
-            subprocess.stderr.on('data', (data: Error) => {
+            subprocess.stderr?.on('data', (data: Buffer) => {
                 const msg = data.toString();
                 console.error("[Bankai] Stderr(Sync):", msg);
                 // Only notify on stderr if it's critical, otherwise it spams
             });
 
             // 3. Standard Output (Logs from Python)
-            subprocess.stdout.on('data', (data: string) => {
-                console.log(`[Bankai] Stdout(Sync): ${data}`);
+            subprocess.stdout?.on('data', (data: Buffer) => {
+                console.log(`[Bankai] Stdout(Sync): ${data.toString()}`);
             });
 
             // 4. Exit Handling (Process finished)
@@ -259,13 +205,13 @@ export default class Bankai extends Plugin {
                 
                 this.startTimer
                 this.updateButtonIsSyncing(false);
-        });
+            });
 
-    } catch (e) {
-        console.error("[Bankai] Execution Exception:", e);
-        new Notice(`Failed to launch: ${e instanceof Error ? e.message : String(e)}`);
-        this.updateButtonIsSyncing(false);
-    }
+        } catch (e) {
+            console.error("[Bankai] Execution Exception:", e);
+            new Notice(`Failed to launch: ${e instanceof Error ? e.message : String(e)}`);
+            this.updateButtonIsSyncing(false);
+        }
     }
 
     async activateTableView() {
@@ -274,8 +220,76 @@ export default class Bankai extends Plugin {
 
     //TODO Fuck as cursed and does absolutely nothing
     async handleInputWindow() {
-        new InputConfidentialData(this.app, (adminPassword: string, sEmail: string, sPassword: string) => {
-            return({adminPassword, sEmail, sPassword});
+        new InputConfidentialData(this.app, this.settings.SetupMode, (adminPassword: string, sEmail: string, sPassword: string) => {
+            const vaultBasePath = (this.app.vault.adapter as any).basePath as string;
+            const pluginId = this.manifest.id;
+            const pluginPath = path.join(vaultBasePath, '.obsidian', 'plugins', pluginId);
+            const scriptBin = (() => {
+                if (Platform.isWin) {
+                    const scriptName = 'bankai-init.exe';
+                    return path.join(pluginPath, scriptName);
+                } else if (Platform.isLinux) {
+                    const scriptName = 'bankai-init';
+                    return path.join(pluginPath, scriptName);
+                } else {
+                    throw new Error(`Unsupported Operating System: ${navigator.platform}`);
+                }
+            })();
+
+            try {
+                let subprocess: ReturnType<typeof spawn> | undefined;
+
+                if (this.settings.SetupMode == '0') {
+                    subprocess = spawn(scriptBin, ["-p", pluginPath, "-m", "0", "--spass", sPassword, "--smail", sEmail, "-P", adminPassword]);
+                }
+                else if (this.settings.SetupMode == '1') {
+                    subprocess = spawn(scriptBin, ["-p", pluginPath, "-m", "1"]);
+                }
+                else if (this.settings.SetupMode == '2') {
+                    subprocess = spawn(scriptBin, ["-p", pluginPath, "-m", "2", "-P", adminPassword]);
+                }
+                else if (this.settings.SetupMode == '3') {
+                    subprocess = spawn(scriptBin, ["-p", pluginPath, "-m", "3", "--spass", sPassword, "--smail", sEmail]);
+                }
+
+                if (!subprocess) {
+                    throw new Error(`Unsupported setup mode: ${this.settings.SetupMode}`);
+                }
+
+                // 1. Spawn Errors (Process failed to start)
+                subprocess.on('error', (err: Error) => {
+                    console.error("[Bankai] Spawn Error(Init):", err);
+                    new Notice(`Critical Error: ${err.message}`);
+                });
+
+                // 2. Runtime Errors (Stderr output)
+                subprocess.stderr?.on('data', (data: Buffer) => {
+                    const msg = data.toString();
+                    console.error("[Bankai] Stderr(Init):", msg);
+                    // Only notify on stderr if it's critical, otherwise it spams
+                });
+
+                // 3. Standard Output (Logs from Python)
+                subprocess.stdout?.on('data', (data: Buffer) => {
+                    console.log(`[Bankai] Stdout(Init): ${data.toString()}`);
+                });
+
+                // 4. Exit Handling (Process finished)
+                subprocess.on('close', (codeNumber: number) => {
+                    console.log(`[Bankai] Process exited with code ${codeNumber} on Process Init`);
+                    
+                    if (codeNumber === 0) {
+                        this.updateButtonIsSyncing(false);
+                        new Notice(`Finished Init`);
+                    } else {
+                        new Notice(`Process failed(Init). Exit Code: ${codeNumber}. Check Console.`);
+                    }
+                });
+
+            } catch (e) {
+                console.error("[Bankai] Execution Exception(Init):", e);
+                new Notice(`Failed to launch: ${e instanceof Error ? e.message : String(e)}`);
+            }
         }).open();
 
 

@@ -1,16 +1,18 @@
-import { App, PluginSettingTab, Setting } from 'obsidian';
+import { App, PluginSettingTab, Setting, Value } from 'obsidian';
 import Bankai, { InputConfidentialData } from './main';
 
 export interface BankaiSettings {
 	DownloadInterval: number;
 	DownloadDirectory: string;
 	PluginEnabled: boolean;
+	SetupMode: string;
 }
 
 export const DEFAULT_SETTINGS: BankaiSettings = {
 	DownloadInterval: 10,
 	DownloadDirectory: '',
 	PluginEnabled: false,
+	SetupMode: '0',
 };
 
 export class BankaiSettingTab extends PluginSettingTab {
@@ -71,25 +73,36 @@ export class BankaiSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					}),
 			);
+		
+		const descFragment = document.createDocumentFragment();
+			descFragment.append(
+				'Execute core setup, download dependencies, and apply updates. Refreshes browser cookies to resolve state errors.',
+				descFragment.createEl('br'),
+				descFragment.createEl('br'),
+				descFragment.createEl('strong', { text: 'Requirements: ' }),
+				'Linux updates require administrative privileges. Synchronization requires institutional credentials.'
+			);
 
 		new Setting(containerEl)
 			.setName('Initialize / Update')
-			.setDesc('Initialize the plugin, download dependencies or Update if possible\nRefetch browser cookies. If you experience problems, try this.')
-			.addButton((button) => {
-				button
-					.setButtonText('Run Setup')
-					.onClick(() => this.plugin.bankaiInit());
-			});
-
-		new Setting(containerEl)
-			.setName('Set Secure Login Data')
-			.setDesc('Input the administrative password and service account details required for synchronization.')
-            .addButton((btn) =>
-                btn 
-                    .setButtonText("Open Window")
-                    .onClick(() => {
+			.setDesc(descFragment)
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption('0', 'Initialize all')
+					.addOption('1', 'Refetch Cookies')
+					.addOption('2', 'Update Dependencies')
+					.addOption('3', 'Update Credentials')
+					.setValue(this.plugin.settings.SetupMode)
+					.onChange(async (value) => {
+						this.plugin.settings.SetupMode = value;
+						await this.plugin.saveSettings();
+					}))
+			.addButton((btn) =>
+				btn
+					.setButtonText('Initialize')
+					.onClick(() => {
 						this.plugin.handleInputWindow()
-                    })
-            );
-	}
+					})
+			);
+		};
 }
