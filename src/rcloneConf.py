@@ -7,6 +7,7 @@ import subprocess as sp
 import sys
 import json
 import argparse
+import getpass
 
 parser = argparse.ArgumentParser(prog="Bankai Conf script", description="Handles Credentials and the fetching of cookies from browsers and the writing of them to the rclone.conf file")
 parser.add_argument("-p", "--plugin", help="Path to the plugin folder", default=os.path.abspath(os.getcwd()))
@@ -18,19 +19,10 @@ parser.add_argument("-m", "--mode", help="Mode", default="")
 parsed_args = parser.parse_args(sys.argv[1:])
 
 json_path = os.path.join(parsed_args.plugin, "subjects.json")
-rclone_conf = os.path.join(current_dir, "rclone.conf")
-mode = int(parsed_args)
+rclone_conf = os.path.join(parsed_args.plugin, "rclone.conf")
+mode = int(parsed_args.mode)
 
-if mode == 0:
-    rcloneSetup()
-    BrowserCookie()
-elif mode == 1:
-    BrowserCookie()
-elif mode == 2:
-    rcloneSetup()
-elif mode == 3:
-    BrowserCookie()
-else: pass
+remote_name = "BankaiRemote" # replace with the name of your rclone remote for onedrive
 
 def rcloneSetup():
     if sys.platform in ("linux", "darwin"):
@@ -44,7 +36,7 @@ def rcloneSetup():
         if proc.returncode == 0 or proc.returncode == 3:
             print("Rclone installed successfully!")
 
-def writeHeaders():
+def writeHeaders(rtFa, FedAuth):
         with open(rclone_conf, "r+") as f:
             lines = f.readlines()
             
@@ -156,8 +148,6 @@ def BrowserCookie():
         break # just get the first url, since all of them are on the same sharepoint site
     f.close()
 
-    remote_name = "BankaiRemote" # replace with the name of your rclone remote for onedrive
-
     def find_firefox_cookies():
         if sys.platform == "linux":
             profile_root = os.path.join(os.path.expanduser("~"), ".config", "mozilla", "firefox")
@@ -225,7 +215,7 @@ def BrowserCookie():
             rtFa = fetched[0][0]
             FedAuth = fetched[1][0]
 
-            writeToRcloneConf()
+            writeHeaders(rtFa, FedAuth)
 
             try:
                 proc = sp.run(["rclone", "ls", remote_name+":", "--webdav-url", webdav_url, "--config", rclone_conf])
@@ -250,13 +240,26 @@ def BrowserCookie():
             FedAuth = get_cookies(f"https://{tenant}-my.sharepoint.com", browser=getattr(BrowserType, browserStrings[bs]),cookie_file=chromium_cookies)["FedAuth"]
         
 
-        writeHeaders()
+        writeHeaders(rtFa, FedAuth)
 
         proc = sp.run(["rclone", "ls", remote_name+":", "--webdav-url", webdav_url, "--config", rclone_conf])
         if proc.returncode == 0:
             print(f"Chromium cookies worked with {browserStrings[bs]}!")
-            break
+            exit(0)
         else:
             continue
 
-    print("Done!")
+print(f"Fetching Cookies Failed. Pls try signing on on OneDrive")
+exit(1)
+    
+
+if mode == 0:
+    rcloneSetup()
+    BrowserCookie()
+elif mode == 1:
+    BrowserCookie()
+elif mode == 2:
+    rcloneSetup()
+elif mode == 3:
+    BrowserCookie()
+else: pass

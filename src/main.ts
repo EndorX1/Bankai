@@ -38,7 +38,7 @@ export class InputConfidentialData extends Modal {
         contentEl.createEl("h1", { text: "User Data Input" });
         
         // Render Admin Password field for specific modes (e.g., '0' Initialize all, '2' Update Dependencies)
-        if (this.mode === '0' || this.mode === '2') {
+        if (Platform.isLinux && (this.mode === '0' || this.mode === '2')) {
             new Setting(contentEl)
                 .setName("Admin Password")
                 .addText((text) =>
@@ -146,7 +146,7 @@ export default class Bankai extends Plugin {
 	}
 
     async updateButtonIsSyncing(running: boolean) {
-        new Notice('Bankai Reset Under Construction');
+        new Notice('Bankai Button Under Construction');
     }
 
     async bankaiSync() {
@@ -220,7 +220,7 @@ export default class Bankai extends Plugin {
 
     //TODO Fuck as cursed and does absolutely nothing
     async handleInputWindow() {
-        new InputConfidentialData(this.app, this.settings.SetupMode, (adminPassword: string, sEmail: string, sPassword: string) => {
+        const confBuild = (adminPassword = "", sEmail = "", sPassword = "") => {
             const vaultBasePath = (this.app.vault.adapter as any).basePath as string;
             const pluginId = this.manifest.id;
             const pluginPath = path.join(vaultBasePath, '.obsidian', 'plugins', pluginId);
@@ -290,8 +290,14 @@ export default class Bankai extends Plugin {
                 console.error("[Bankai] Execution Exception(Init):", e);
                 new Notice(`Failed to launch: ${e instanceof Error ? e.message : String(e)}`);
             }
-        }).open();
-
-
-}
+        }
+        if (this.settings.SetupMode != '1') {
+            new InputConfidentialData(this.app, this.settings.SetupMode, (adminPassword: string, sEmail: string, sPassword: string) => {
+                confBuild(adminPassword, sEmail, sPassword);
+            }).open();
+        }
+        else {
+            confBuild();
+        }
+    }
 }

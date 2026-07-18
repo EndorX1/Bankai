@@ -15,15 +15,24 @@ TypeScript build/dev commands for the Obsidian plugin:
 
 ```bash
 ./venv/bin/pyinstaller --onefile --name bankai-sync --distpath bankai/dev/build/dist/linux --workpath bankai/dev/build/build/sync --specpath bankai/dev/spec/api bankai/src/Sync.py
-./venv/bin/pyinstaller --onefile --name bankai-init --distpath bankai/dev/build/dist/linux --workpath bankai/dev/build/build/setup --specpath bankai/dev/spec/api bankai/src/rcloneCookie.py
+./venv/bin/pyinstaller --onefile --name bankai-init --distpath bankai/dev/build/dist/linux --workpath bankai/dev/build/build/setup --specpath bankai/dev/spec/api bankai/src/rcloneConf.py
 ./venv/bin/pyinstaller --onefile --name bankai-api --distpath bankai/dev/build/dist/linux --workpath bankai/dev/build/build/api --specpath bankai/dev/spec/api bankai/src/API.py
+
+rm -f TestVault/.obsidian/plugins/bankai/bankai-init \
+      TestVault/.obsidian/plugins/bankai/bankai-sync \
+      TestVault/.obsidian/plugins/bankai/bankai-api
+
+cp bankai/dev/build/dist/linux/bankai-init \
+   bankai/dev/build/dist/linux/bankai-sync \
+   bankai/dev/build/dist/linux/bankai-api \
+   TestVault/.obsidian/plugins/bankai/
 ```
 
 ### macOS (run on macOS)
 
 ```bash
 ./venv/bin/pyinstaller --onefile --name bankai-sync --distpath bankai/dev/build/dist/mac --workpath bankai/dev/build/build/sync --specpath bankai/dev/spec/api bankai/src/Sync.py
-./venv/bin/pyinstaller --onefile --name bankai-init --distpath bankai/dev/build/dist/mac --workpath bankai/dev/build/build/setup --specpath bankai/dev/spec/api bankai/src/rcloneCookie.py
+./venv/bin/pyinstaller --onefile --name bankai-init --distpath bankai/dev/build/dist/mac --workpath bankai/dev/build/build/setup --specpath bankai/dev/spec/api bankai/src/rcloneConf.py
 ./venv/bin/pyinstaller --onefile --name bankai-api --distpath bankai/dev/build/dist/mac --workpath bankai/dev/build/build/api --specpath bankai/dev/spec/api bankai/src/API.py
 ```
 
@@ -31,7 +40,7 @@ TypeScript build/dev commands for the Obsidian plugin:
 
 ```bash
 venv\\Scripts\\pyinstaller.exe --onefile --name bankai-sync --distpath bankai\\dev\\build\\dist\\win --workpath bankai\\dev\\build\\build\\sync --specpath bankai\\dev\\spec\\api bankai\\src\\Sync.py
-venv\\Scripts\\pyinstaller.exe --onefile --name bankai-init --distpath bankai\\dev\\build\\dist\\win --workpath bankai\\dev\\build\\build\\setup --specpath bankai\\dev\\spec\\api bankai\\src\\rcloneCookie.py
+venv\\Scripts\\pyinstaller.exe --onefile --name bankai-init --distpath bankai\\dev\\build\\dist\\win --workpath bankai\\dev\\build\\build\\setup --specpath bankai\\dev\\spec\\api bankai\\src\\rcloneConf.py
 venv\\Scripts\\pyinstaller.exe --onefile --name bankai-api --distpath bankai\\dev\\build\\dist\\win --workpath bankai\\dev\\build\\build\\api --specpath bankai\\dev\\spec\\api bankai\\src\\API.py
 ```
 
