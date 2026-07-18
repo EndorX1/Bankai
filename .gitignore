@@ -25,5 +25,3 @@ data.json
 dev/build/
 dev/dist/
 dev/spec/
-
-rclone.conf
