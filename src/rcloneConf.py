@@ -20,7 +20,7 @@ parsed_args = parser.parse_args(sys.argv[1:])
 
 json_path = os.path.join(parsed_args.plugin, "subjects.json")
 rclone_conf = os.path.join(parsed_args.plugin, "rclone.conf")
-mode = int(parsed_args.mode)
+mode = parsed_args.mode
 
 remote_name = "BankaiRemote" # replace with the name of your rclone remote for onedrive
 
@@ -179,6 +179,7 @@ def BrowserCookie():
         browserStrings = ["BRAVE", "CHROME"]
         browserPaths = [
             os.path.join(os.path.expanduser("~"), ".config", "BraveSoftware", "Brave-Browser", "Default", "Cookies"),
+            os.path.join(os.path.expanduser("~"), ".config", "BraveSoftware", "Brave-Origin", "Default", "Cookies"),
             os.path.join(os.path.expanduser("~"), ".config", "google-chrome", "Default", "Cookies")
         ]
     elif sys.platform.startswith("win"):
@@ -245,21 +246,21 @@ def BrowserCookie():
         proc = sp.run(["rclone", "ls", remote_name+":", "--webdav-url", webdav_url, "--config", rclone_conf])
         if proc.returncode == 0:
             print(f"Chromium cookies worked with {browserStrings[bs]}!")
-            exit(0)
+            sys.exit(0)
         else:
             continue
 
-print(f"Fetching Cookies Failed. Pls try signing on on OneDrive")
-exit(1)
-    
-
-if mode == 0:
+if mode == "0":
     rcloneSetup()
     BrowserCookie()
-elif mode == 1:
+elif mode == "1":
     BrowserCookie()
-elif mode == 2:
+elif mode == "2":
     rcloneSetup()
-elif mode == 3:
+    sys.exit(0)
+elif mode == "3":
     BrowserCookie()
 else: pass
+
+print("Fetching Cookies Failed. Pls try signing on OneDrive")
+sys.exit(1)

@@ -51,5 +51,5 @@ From the `bankai` package root, these Linux-only commands will compile the plugi
 ```bash
 npm run build:linux
 npm run copy:linux
-npm run test
+npm run test:linux
 ```

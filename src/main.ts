@@ -8,6 +8,7 @@ import {
     Platform,
     Setting,
     App,
+    WorkspaceLeaf,
 } from 'obsidian';
 import {
 	DEFAULT_SETTINGS,
@@ -19,6 +20,7 @@ import {
     exec,
 } from 'child_process';
 import * as path from 'path';
+import { TableView, VIEW_TYPE } from './view';
 
 export class InputConfidentialData extends Modal {
     private adminPassword = "";
@@ -114,7 +116,7 @@ export default class Bankai extends Plugin {
 		await this.loadSettings();
         this.startTimer();
 
-		this.addRibbonIcon('table', 'Open Database Searcher', () => {
+		this.addRibbonIcon('table', 'Open TableView', () => {
 			this.activateTableView();
 		});
 
@@ -128,7 +130,11 @@ export default class Bankai extends Plugin {
 		});
 
         this.addSettingTab(new BankaiSettingTab(this.app, this));
-
+        
+        this.registerView(
+            VIEW_TYPE,
+            (leaf) => new TableView(leaf, this)
+        );
 	}
 
 	onunload() {}
@@ -147,6 +153,61 @@ export default class Bankai extends Plugin {
 
     async updateButtonIsSyncing(running: boolean) {
         new Notice('Bankai Button Under Construction');
+    }
+
+    async processErrorHandling(
+        scriptBin: string,
+        args: string[],
+        callbacks: {
+            onSuccess?: () => void;
+            onError?: (err: Error | unknown) => void;
+            onStderr?: (msg: string) => void;
+            onStdout?: (msg: string) => void;
+            onClose?: (code: number) => void;
+            onFail?: (code: number) => void;
+            onConFail?: (msg: unknown) => void;
+        } = {}
+    ): Promise<void> {
+        try {
+            const subprocess = spawn(scriptBin, args);
+
+            subprocess.on('error', (err: Error) => {
+                console.error(`[Bankai] Spawn Error(${scriptBin}):`, err);
+                new Notice(`Critical Error: ${err.message}`);
+                if (callbacks.onError) callbacks.onError(err);
+            });
+
+            subprocess.stderr?.on('data', (data: Buffer) => {
+                const msg = data.toString();
+                console.error(`[Bankai] Stderr(${scriptBin}):`, msg);
+                if (callbacks.onStderr) callbacks.onStderr(msg);
+            });
+
+            subprocess.stdout?.on('data', (data: Buffer) => {
+                const msg = data.toString();
+                console.log(`[Bankai] Stdout(${scriptBin}): ${msg}`);
+                if (callbacks.onStdout) callbacks.onStdout(msg);
+            });
+
+            subprocess.on('close', (codeNumber: number) => {
+                console.log(`[Bankai] Process exited with code ${codeNumber} on Process ${scriptBin}`);
+                
+                if (codeNumber === 0) {
+                    if (callbacks.onSuccess) callbacks.onSuccess();
+                } else {
+                    new Notice(`Process failed. Exit Code: ${codeNumber}. Check Console. On Process ${scriptBin}`);
+                    if (callbacks.onFail) callbacks.onFail(codeNumber);
+                }
+
+                if (callbacks.onClose) callbacks.onClose(codeNumber);
+                
+            });
+
+        } catch (e) {
+            console.error(`[Bankai] Execution Exception(${scriptBin}):`, e);
+            new Notice(`Failed to launch: ${e instanceof Error ? e.message : String(e)}`);
+            if (callbacks.onConFail) callbacks.onConFail(e);
+        }
     }
 
     async bankaiSync() {
@@ -169,56 +230,56 @@ export default class Bankai extends Plugin {
             }
         })();
 
-        try {
-            const subprocess = spawn(scriptBin, ["-p", pluginPath, "-r", targetDir]);
-            this.updateButtonIsSyncing(true);
+        this.updateButtonIsSyncing(true);
 
-            // 1. Spawn Errors (Process failed to start)
-            subprocess.on('error', (err: Error) => {
-                console.error("[Bankai] Spawn Error(Sync):", err);
-                new Notice(`Critical Error: ${err.message}`);
+        this.processErrorHandling(
+        scriptBin,
+        ["-p", pluginPath, "-r", targetDir],
+        {
+            onSuccess: () => {
+                new Notice('Finished Syncing');
+            },
+            onError: (err) => {
                 this.updateButtonIsSyncing(false);
-            });
-
-            // 2. Runtime Errors (Stderr output)
-            subprocess.stderr?.on('data', (data: Buffer) => {
-                const msg = data.toString();
-                console.error("[Bankai] Stderr(Sync):", msg);
-                // Only notify on stderr if it's critical, otherwise it spams
-            });
-
-            // 3. Standard Output (Logs from Python)
-            subprocess.stdout?.on('data', (data: Buffer) => {
-                console.log(`[Bankai] Stdout(Sync): ${data.toString()}`);
-            });
-
-            // 4. Exit Handling (Process finished)
-            subprocess.on('close', (codeNumber: number) => {
-                console.log(`[Bankai] Process exited with code ${codeNumber} on Process Sync`);
-                
-                if (codeNumber === 0) {
-                    this.updateButtonIsSyncing(false);
-                    new Notice(`Finished Syncing`);
-                } else {
-                    new Notice(`Process failed. Exit Code: ${codeNumber}. Check Console.`);
-                }
-                
-                this.startTimer
+            },
+            onClose: (code) => {
+                this.startTimer();
                 this.updateButtonIsSyncing(false);
-            });
-
-        } catch (e) {
-            console.error("[Bankai] Execution Exception:", e);
-            new Notice(`Failed to launch: ${e instanceof Error ? e.message : String(e)}`);
-            this.updateButtonIsSyncing(false);
+            },
+            onFail: (code) => {
+                new Notice(`Process failed. Exit Code: ${code}. Check Console.`);
+            },
+            onConFail: (msg) => {
+                this.updateButtonIsSyncing(false);
+            }
         }
+        )
     }
 
     async activateTableView() {
-        new Notice('Bankai Table View Under Construction');
+        const { workspace } = this.app;
+        
+        let leaf: WorkspaceLeaf | null | undefined = null;
+        const leaves = workspace.getLeavesOfType(VIEW_TYPE);
+
+        if (leaves.length > 0) {
+            leaf = leaves[0];
+        } else {
+            // true/false dictates if the leaf is split. false appends to existing right sidebar.
+            leaf = workspace.getRightLeaf(false);
+        }
+
+        if (!leaf) {
+            return;
+        }
+
+        if (leaves.length === 0) {
+            await leaf.setViewState({ type: VIEW_TYPE, active: true });
+        }
+
+        workspace.revealLeaf(leaf);
     }
 
-    //TODO Fuck as cursed and does absolutely nothing
     async handleInputWindow() {
         const confBuild = (adminPassword = "", sEmail = "", sPassword = "") => {
             const vaultBasePath = (this.app.vault.adapter as any).basePath as string;
@@ -236,59 +297,17 @@ export default class Bankai extends Plugin {
                 }
             })();
 
-            try {
-                let subprocess: ReturnType<typeof spawn> | undefined;
-
-                if (this.settings.SetupMode == '0') {
-                    subprocess = spawn(scriptBin, ["-p", pluginPath, "-m", "0", "--spass", sPassword, "--smail", sEmail, "-P", adminPassword]);
-                }
-                else if (this.settings.SetupMode == '1') {
-                    subprocess = spawn(scriptBin, ["-p", pluginPath, "-m", "1"]);
-                }
-                else if (this.settings.SetupMode == '2') {
-                    subprocess = spawn(scriptBin, ["-p", pluginPath, "-m", "2", "-P", adminPassword]);
-                }
-                else if (this.settings.SetupMode == '3') {
-                    subprocess = spawn(scriptBin, ["-p", pluginPath, "-m", "3", "--spass", sPassword, "--smail", sEmail]);
-                }
-
-                if (!subprocess) {
-                    throw new Error(`Unsupported setup mode: ${this.settings.SetupMode}`);
-                }
-
-                // 1. Spawn Errors (Process failed to start)
-                subprocess.on('error', (err: Error) => {
-                    console.error("[Bankai] Spawn Error(Init):", err);
-                    new Notice(`Critical Error: ${err.message}`);
-                });
-
-                // 2. Runtime Errors (Stderr output)
-                subprocess.stderr?.on('data', (data: Buffer) => {
-                    const msg = data.toString();
-                    console.error("[Bankai] Stderr(Init):", msg);
-                    // Only notify on stderr if it's critical, otherwise it spams
-                });
-
-                // 3. Standard Output (Logs from Python)
-                subprocess.stdout?.on('data', (data: Buffer) => {
-                    console.log(`[Bankai] Stdout(Init): ${data.toString()}`);
-                });
-
-                // 4. Exit Handling (Process finished)
-                subprocess.on('close', (codeNumber: number) => {
-                    console.log(`[Bankai] Process exited with code ${codeNumber} on Process Init`);
-                    
-                    if (codeNumber === 0) {
-                        this.updateButtonIsSyncing(false);
-                        new Notice(`Finished Init`);
-                    } else {
-                        new Notice(`Process failed(Init). Exit Code: ${codeNumber}. Check Console.`);
-                    }
-                });
-
-            } catch (e) {
-                console.error("[Bankai] Execution Exception(Init):", e);
-                new Notice(`Failed to launch: ${e instanceof Error ? e.message : String(e)}`);
+            if (this.settings.SetupMode == '0') {
+                this.processErrorHandling(scriptBin, ["-p", pluginPath, "-m", "0", "--spass", sPassword, "--smail", sEmail, "-P", adminPassword], {})
+            }
+            else if (this.settings.SetupMode == '1') {
+                this.processErrorHandling(scriptBin, ["-p", pluginPath, "-m", "1"], {})
+            }
+            else if (this.settings.SetupMode == '2') {
+                this.processErrorHandling(scriptBin, ["-p", pluginPath, "-m", "2", "-P", adminPassword], {})
+            }
+            else if (this.settings.SetupMode == '3') {
+                this.processErrorHandling(scriptBin, ["-p", pluginPath, "-m", "3", "--spass", sPassword, "--smail", sEmail], {})
             }
         }
         if (this.settings.SetupMode != '1') {
