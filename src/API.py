@@ -36,10 +36,11 @@ def filter(args, filepath):
     return True
 
 def createRecord(args):
-    output = []
+    output = {}
+    records = []
     subjects = os.listdir(args.root)
     if args.subjects:
-        return subjects
+        output["subjects"] = subjects
     subject_dirs = {os.path.join(args.root, subs) for subs in subjects}
     for root, dirs, files in os.walk(os.path.join(args.root, args.subject), topdown=True):
         subject = ""
@@ -49,7 +50,7 @@ def createRecord(args):
             filepath = os.path.join(root, file)
             if filter(args, filepath):
                 if args.absolute:
-                    record = {"path": filepath}
+                    record["path"] = filepath
                     if not args.folder:
                         record["folder"] = root
                 else:
@@ -64,7 +65,8 @@ def createRecord(args):
                     record["subject"] = subject
                 if not args.time:
                     record["time"] = os.stat(filepath).st_ctime
-                output.append(record)
+                records.append(record)
+    output["files"] = records
     return output
 
 
