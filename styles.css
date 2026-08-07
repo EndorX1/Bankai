@@ -1,0 +1,35 @@
+/* styles.css */
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 16px;
+}
+
+.table th {
+    border: 1px solid var(--background-modifier-border);
+    padding: 8px;
+    background-color: var(--background-secondary)
+}
+.table td {
+    border: 1px solid var(--background-modifier-border);
+    padding: 8px;
+}
+
+.conDiv {
+    margin-bottom: '10px';
+}
+.conDiv input {
+    width: '100%';
+    padding: '8px';
+}
+
+.butDiv {
+    margin-right: '10px'
+}
+
+.butDiv input {
+    width: '50px';
+    margin-right: '5px';
+    margin-left: '10px';
+}
