@@ -16,7 +16,7 @@ parser.add_argument("-t", "--time", action='store_true', help="Exclude file ctim
 
 parser.add_argument("-a", "--absolute", help="Specify if paths should be absolute", action='store_true')
 
-parser.add_argument("-d", "--days", type=int, help="Specify number of days for which to show files")
+parser.add_argument("-d", "--days", type=int, help="Specify number of days for which to show files(1 is today)")
 parser.add_argument("-S", "--search", type=str, help="Specify search term", default="")
 parser.add_argument("--subject", type=str, help="Specify subject to filter by", default="")
 parser.add_argument("-n", "--new", type=float, help="Show only new files since last sync")
