@@ -131,6 +131,8 @@ export class TableView extends ItemView {
         let timePressed = false;
         let SubjectF = ""
         let DaysF = 0
+        const SubjectBtns: HTMLButtonElement[] = []
+        let todayPressed = false
 
         const controlsDiv = contentEl.createEl('div', { cls: 'conDiv' });
         controlsDiv.style.marginBottom = '20px';
@@ -187,11 +189,27 @@ export class TableView extends ItemView {
         const subjects = Array.isArray(this.struct?.subjects) ? this.struct.subjects : [];
 
         subjects.forEach((subject: string) => {
-			const btn = subjectButtonsDiv.createEl('button', { text: subject });
+			const btn = subjectButtonsDiv.createEl('button', { text: subject }) as HTMLButtonElement;
+            btn.dataset.pressed = 'false';
+            SubjectBtns.push(btn);
 			btn.addEventListener('click', () => {
-            this.struct = this.pullPythonData(scriptBin, this.mngArgs(targetDir, searchInput.value, namePressed, subjectPressed, timePressed, subject, DaysF));
-            this.reCreateTable(contentEl)
-            //TODO: Highlighting for each selected button and multi subject support
+                const isPressed = btn.dataset.pressed === 'true';
+                const nextPressed = !isPressed;
+                btn.dataset.pressed = String(nextPressed);
+                btn.style.backgroundColor = nextPressed ? '#4caf50' : '';
+                btn.style.color = nextPressed ? 'white' : '';
+                SubjectF = nextPressed ? subject : "";
+                if (nextPressed) {
+                    SubjectBtns.forEach((b) => {
+                        if (b !== btn) {
+                            b.dataset.pressed = 'false';
+                            b.style.backgroundColor = '';
+                            b.style.color = '';
+                        }
+                    });
+                }
+                this.struct = this.pullPythonData(scriptBin, this.mngArgs(targetDir, searchInput.value, namePressed, subjectPressed, timePressed, SubjectF, DaysF));
+                this.reCreateTable(contentEl)
             });
 	    });
 
@@ -199,10 +217,12 @@ export class TableView extends ItemView {
 
         const todayBtn = timeButtonsDiv.createEl('button', { text: 'Today' });
 		todayBtn.addEventListener('click', () => {
+            todayPressed = !todayPressed;
+            todayBtn.style.backgroundColor = todayPressed ? '#4caf50' : '';
+            todayBtn.style.color = todayPressed ? 'white' : '';
             DaysF = 1
             this.struct = this.pullPythonData(scriptBin, this.mngArgs(targetDir, searchInput.value, namePressed, subjectPressed, timePressed, SubjectF, DaysF));
             this.reCreateTable(contentEl)
-            //TODO Highlighting
             });
 
 		const daysLabel = timeButtonsDiv.createEl('span', { text: 'Last Days:' });
@@ -212,6 +232,10 @@ export class TableView extends ItemView {
 		daysInput.type = 'number';
         daysInput.placeholder = '7';
 		daysInput.addEventListener('input', () => {
+            todayPressed = false;
+            todayBtn.style.backgroundColor = '';
+            todayBtn.style.color = '';
+            DaysF = parseInt(daysInput.value);
             this.struct = this.pullPythonData(scriptBin, this.mngArgs(targetDir, searchInput.value, namePressed, subjectPressed, timePressed, SubjectF, DaysF));
             this.reCreateTable(contentEl)
             });
