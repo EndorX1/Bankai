@@ -1,4 +1,4 @@
-import { ItemView, Platform, WorkspaceLeaf } from 'obsidian';
+import { ItemView, Notice, Platform, WorkspaceLeaf } from 'obsidian';
 import * as path from 'path';
 import Bankai from './main';
 
@@ -27,10 +27,9 @@ export class TableView extends ItemView {
         return "Tableview";
     }
 
-    async reCreateTable(contentEl: Element) {
-        contentEl.empty();
-        const table = contentEl.createEl('table', { cls: 'table' });
-        
+    async reCreateTable(table: Element) {
+        table.empty()
+
         const thead = table.createEl('thead');
 		const headerRow = thead.createEl('tr');
         columns.forEach((key) => {
@@ -38,7 +37,9 @@ export class TableView extends ItemView {
             th.textContent = key as string;
         });
 
+        console.log("struct", this.struct);
         const files = Array.isArray(this.struct?.files) ? this.struct.files : [];
+        console.log("files", files);
         const tbody = table.createEl('tbody');
         files.forEach((file: any) => {
             const tr = tbody.createEl('tr');
@@ -60,6 +61,7 @@ export class TableView extends ItemView {
             //TODO add click eventlistener for copy path
             });
         });
+        return table
     }
 
     async pullPythonData(sBin: string, args: string[]): Promise<any> {
@@ -134,44 +136,44 @@ export class TableView extends ItemView {
         const SubjectBtns: HTMLButtonElement[] = []
         let todayPressed = false
 
-        const controlsDiv = contentEl.createEl('div', { cls: 'conDiv' });
-        controlsDiv.style.marginBottom = '20px';
+        const controlsDiv = contentEl.createEl('div', { cls: 'butDiv' });
 
-        const searchInput = controlsDiv.createEl('input');
+        const searchInput = controlsDiv.createEl('input', { cls: 'search' });
         searchInput.type = 'text';
 		searchInput.placeholder = 'Search files...';
-        searchInput.addEventListener('input', () => {
-                this.struct = this.pullPythonData(scriptBin, this.mngArgs(targetDir, searchInput.value, namePressed, subjectPressed, timePressed, SubjectF, DaysF));
-                this.reCreateTable(contentEl)
+        searchInput.addEventListener('input', async () => {
+                this.struct = await this.pullPythonData(scriptBin, this.mngArgs(targetDir, searchInput.value, namePressed, subjectPressed, timePressed, SubjectF, DaysF));
+                this.reCreateTable(table)
                 });
 
         const buttonsDiv = controlsDiv.createEl('div', { cls: 'butDiv' });
-        const nameBtn = buttonsDiv.createEl('button', { text: 'Sort by Name' });
-        nameBtn.addEventListener('click', () => {
+        
+        const nameBtn = buttonsDiv.createEl('button', { text: 'Sort by Name', cls: 'button' });
+        nameBtn.addEventListener('click', async () => {
             namePressed = !namePressed;
             const isPressed = namePressed;
             nameBtn.style.backgroundColor = isPressed ? '#4caf50' : '';
             nameBtn.style.color = isPressed ? 'white' : '';
-            this.struct = this.pullPythonData(scriptBin, this.mngArgs(targetDir, searchInput.value, namePressed, subjectPressed, timePressed, SubjectF, DaysF));
-            this.reCreateTable(contentEl)
+            this.struct = await await this.pullPythonData(scriptBin, this.mngArgs(targetDir, searchInput.value, namePressed, subjectPressed, timePressed, SubjectF, DaysF));
+            this.reCreateTable(table)
         });
 
-        const subjectBtn = buttonsDiv.createEl('button', { text: 'Sort by Subject' });
-		subjectBtn.addEventListener('click', () => {
+        const subjectBtn = buttonsDiv.createEl('button', { text: 'Sort by Subject', cls: 'button' });
+		subjectBtn.addEventListener('click', async () => {
             subjectPressed = !subjectPressed;
             subjectBtn.style.backgroundColor = subjectPressed ? '#4caf50' : '';
             subjectBtn.style.color = subjectPressed ? 'white' : '';
-            this.struct = this.pullPythonData(scriptBin, this.mngArgs(targetDir, searchInput.value, namePressed, subjectPressed, timePressed, SubjectF, DaysF));
-            this.reCreateTable(contentEl)
+            this.struct = await this.pullPythonData(scriptBin, this.mngArgs(targetDir, searchInput.value, namePressed, subjectPressed, timePressed, SubjectF, DaysF));
+            this.reCreateTable(table)
             });
         
-        const timeBtn = buttonsDiv.createEl('button', { text: 'Sort by Time' });
-		timeBtn.addEventListener('click', () => {
+        const timeBtn = buttonsDiv.createEl('button', { text: 'Sort by Time', cls: 'button' });
+		timeBtn.addEventListener('click', async () => {
             timePressed = !timePressed;
             timeBtn.style.backgroundColor = timePressed ? '#4caf50' : '';
             timeBtn.style.color = timePressed ? 'white' : '';
-            this.struct = this.pullPythonData(scriptBin, this.mngArgs(targetDir, searchInput.value, namePressed, subjectPressed, timePressed, SubjectF, DaysF));
-            this.reCreateTable(contentEl)
+            this.struct = await this.pullPythonData(scriptBin, this.mngArgs(targetDir, searchInput.value, namePressed, subjectPressed, timePressed, SubjectF, DaysF));
+            this.reCreateTable(table)
             });
 
 
@@ -179,20 +181,26 @@ export class TableView extends ItemView {
 
         const subjectButtonsDiv = controlsDiv.createEl('div', { cls: 'butDiv' });
 
-        const allBtn = subjectButtonsDiv.createEl('button', { text: 'All' });
-        allBtn.addEventListener('click', () => {
-            this.struct = this.pullPythonData(scriptBin, this.mngArgs(targetDir, searchInput.value, namePressed, subjectPressed, timePressed, "", DaysF));
-            this.reCreateTable(contentEl)
+        const allBtn = subjectButtonsDiv.createEl('button', { text: 'All', cls: 'button' });
+        allBtn.addEventListener('click', async () => {
+            SubjectF = ""
+            SubjectBtns.forEach((b) => {
+                        b.dataset.pressed = 'false';
+                        b.style.backgroundColor = '';
+                        b.style.color = '';
+                    });
+            this.struct = await this.pullPythonData(scriptBin, this.mngArgs(targetDir, searchInput.value, namePressed, subjectPressed, timePressed, SubjectF, DaysF));
+            this.reCreateTable(table)
             });
 
-        this.struct = await this.pullPythonData(scriptBin, ["-r", targetDir, "--subjects"]);
+        this.struct = await await this.pullPythonData(scriptBin, ["-r", targetDir, "--subjects"]);
         const subjects = Array.isArray(this.struct?.subjects) ? this.struct.subjects : [];
 
         subjects.forEach((subject: string) => {
-			const btn = subjectButtonsDiv.createEl('button', { text: subject }) as HTMLButtonElement;
+			const btn = subjectButtonsDiv.createEl('button', { text: subject, cls: 'button' }) as HTMLButtonElement;
             btn.dataset.pressed = 'false';
             SubjectBtns.push(btn);
-			btn.addEventListener('click', () => {
+			btn.addEventListener('click', async () => {
                 const isPressed = btn.dataset.pressed === 'true';
                 const nextPressed = !isPressed;
                 btn.dataset.pressed = String(nextPressed);
@@ -208,39 +216,39 @@ export class TableView extends ItemView {
                         }
                     });
                 }
-                this.struct = this.pullPythonData(scriptBin, this.mngArgs(targetDir, searchInput.value, namePressed, subjectPressed, timePressed, SubjectF, DaysF));
-                this.reCreateTable(contentEl)
+                this.struct = await this.pullPythonData(scriptBin, this.mngArgs(targetDir, searchInput.value, namePressed, subjectPressed, timePressed, SubjectF, DaysF));
+                this.reCreateTable(table)
             });
 	    });
 
-        const timeButtonsDiv = controlsDiv.createEl('div', { cls: 'butDiv' });
+        const timeButtonsDiv = controlsDiv.createEl('div', { cls: 'butdiv' });
 
-        const todayBtn = timeButtonsDiv.createEl('button', { text: 'Today' });
-		todayBtn.addEventListener('click', () => {
+        const todayBtn = timeButtonsDiv.createEl('button', { text: 'Today', cls: 'button' });
+		todayBtn.addEventListener('click', async () => {
             todayPressed = !todayPressed;
             todayBtn.style.backgroundColor = todayPressed ? '#4caf50' : '';
             todayBtn.style.color = todayPressed ? 'white' : '';
             DaysF = 1
-            this.struct = this.pullPythonData(scriptBin, this.mngArgs(targetDir, searchInput.value, namePressed, subjectPressed, timePressed, SubjectF, DaysF));
-            this.reCreateTable(contentEl)
+            this.struct = await this.pullPythonData(scriptBin, this.mngArgs(targetDir, searchInput.value, namePressed, subjectPressed, timePressed, SubjectF, DaysF));
+            this.reCreateTable(table)
             });
 
 		const daysLabel = timeButtonsDiv.createEl('span', { text: 'Last Days:' });
-		daysLabel.style.marginRight = '5px';
 
 		const daysInput = timeButtonsDiv.createEl('input');
 		daysInput.type = 'number';
         daysInput.placeholder = '7';
-		daysInput.addEventListener('input', () => {
+		daysInput.addEventListener('input', async () => {
             todayPressed = false;
             todayBtn.style.backgroundColor = '';
             todayBtn.style.color = '';
             DaysF = parseInt(daysInput.value);
-            this.struct = this.pullPythonData(scriptBin, this.mngArgs(targetDir, searchInput.value, namePressed, subjectPressed, timePressed, SubjectF, DaysF));
-            this.reCreateTable(contentEl)
+            this.struct = await this.pullPythonData(scriptBin, this.mngArgs(targetDir, searchInput.value, namePressed, subjectPressed, timePressed, SubjectF, DaysF));
+            this.reCreateTable(table)
             });
 
-        this.reCreateTable(contentEl);
+        const table = contentEl.createEl('table', { cls: 'table' });
+        this.reCreateTable(table);
     }
 
     async onClose() {

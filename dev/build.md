@@ -14,26 +14,26 @@ TypeScript build/dev commands for the Obsidian plugin:
 ### Linux
 
 ```bash
-./venv/bin/pyinstaller --onefile --name bankai-sync --distpath bankai/dev/build/dist/linux --workpath bankai/dev/build/build/sync --specpath bankai/dev/spec/api bankai/src/Sync.py
-./venv/bin/pyinstaller --onefile --name bankai-init --distpath bankai/dev/build/dist/linux --workpath bankai/dev/build/build/setup --specpath bankai/dev/spec/api bankai/src/rcloneConf.py
-./venv/bin/pyinstaller --onefile --name bankai-api --distpath bankai/dev/build/dist/linux --workpath bankai/dev/build/build/api --specpath bankai/dev/spec/api bankai/src/API.py
+./venv/bin/pyinstaller --onefile --name bankai-sync --distpath Bankai/dev/build/dist/linux --workpath Bankai/dev/build/build/sync --specpath Bankai/dev/spec/api Bankai/src/Sync.py
+./venv/bin/pyinstaller --onefile --name bankai-init --distpath Bankai/dev/build/dist/linux --workpath Bankai/dev/build/build/setup --specpath Bankai/dev/spec/api Bankai/src/rcloneConf.py
+./venv/bin/pyinstaller --onefile --name bankai-api --distpath Bankai/dev/build/dist/linux --workpath Bankai/dev/build/build/api --specpath Bankai/dev/spec/api Bankai/src/API.py
 
-rm -f TestVault/.obsidian/plugins/bankai/bankai-init \
-      TestVault/.obsidian/plugins/bankai/bankai-sync \
-      TestVault/.obsidian/plugins/bankai/bankai-api
+rm -f TestVault/.obsidian/plugins/Bankai/bankai-init \
+      TestVault/.obsidian/plugins/Bankai/bankai-sync \
+      TestVault/.obsidian/plugins/Bankai/bankai-api
 
-cp bankai/dev/build/dist/linux/bankai-init \
-   bankai/dev/build/dist/linux/bankai-sync \
-   bankai/dev/build/dist/linux/bankai-api \
-   TestVault/.obsidian/plugins/bankai/
+cp Bankai/dev/build/dist/linux/bankai-init \
+   Bankai/dev/build/dist/linux/bankai-sync \
+   Bankai/dev/build/dist/linux/bankai-api \
+   TestVault/.obsidian/plugins/Bankai/
 ```
 
 ### macOS (run on macOS)
 
 ```bash
-./venv/bin/pyinstaller --onefile --name bankai-sync --distpath bankai/dev/build/dist/mac --workpath bankai/dev/build/build/sync --specpath bankai/dev/spec/api bankai/src/Sync.py
-./venv/bin/pyinstaller --onefile --name bankai-init --distpath bankai/dev/build/dist/mac --workpath bankai/dev/build/build/setup --specpath bankai/dev/spec/api bankai/src/rcloneConf.py
-./venv/bin/pyinstaller --onefile --name bankai-api --distpath bankai/dev/build/dist/mac --workpath bankai/dev/build/build/api --specpath bankai/dev/spec/api bankai/src/API.py
+./venv/bin/pyinstaller --onefile --name bankai-sync --distpath Bankai/dev/build/dist/mac --workpath Bankai/dev/build/build/sync --specpath Bankai/dev/spec/api Bankai/src/Sync.py
+./venv/bin/pyinstaller --onefile --name bankai-init --distpath Bankai/dev/build/dist/mac --workpath Bankai/dev/build/build/setup --specpath Bankai/dev/spec/api Bankai/src/rcloneConf.py
+./venv/bin/pyinstaller --onefile --name bankai-api --distpath Bankai/dev/build/dist/mac --workpath Bankai/dev/build/build/api --specpath Bankai/dev/spec/api Bankai/src/API.py
 ```
 
 ### Windows (run on Windows with cmd)

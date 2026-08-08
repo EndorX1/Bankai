@@ -16,20 +16,28 @@
     padding: 8px;
 }
 
-.conDiv {
-    margin-bottom: '10px';
-}
-.conDiv input {
-    width: '100%';
-    padding: '8px';
-}
-
 .butDiv {
-    margin-right: '10px'
+    margin-bottom: 8px;
+    margin-right: 8px;
 }
 
-.butDiv input {
-    width: '50px';
-    margin-right: '5px';
-    margin-left: '10px';
+.search {
+    width: 100%;            
+    margin-bottom: 8px;
+    margin-right: 8px;
+}
+
+.butDiv input:not(.search) {
+    width: 50px;
+    margin-left: 5px;
+}
+
+.button {
+    margin-right: 5px;
+}
+
+.search {
+    width: 100%;            
+    margin-bottom: 8px;
+    margin-right: 8px;
 }
