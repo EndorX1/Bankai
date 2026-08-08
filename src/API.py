@@ -16,7 +16,7 @@ parser.add_argument("-t", "--time", action='store_true', help="Exclude file ctim
 
 parser.add_argument("-a", "--absolute", help="Specify if paths should be absolute", action='store_true')
 
-parser.add_argument("-d", "--days", type=int, help="Specify number of days for which to show files(1 is today)")
+parser.add_argument("-d", "--days", help="Specify number of days for which to show files(1 is today)")
 parser.add_argument("-S", "--search", type=str, help="Specify search term", default="")
 parser.add_argument("--subject", type=str, help="Specify subject to filter by", default="")
 parser.add_argument("-n", "--new", type=float, help="Show only new files since last sync")
@@ -24,6 +24,10 @@ parser.add_argument("--sort", type=str, help="Specify sort order(any combination
 parser.add_argument("--subjects", action='store_true', help="List all subjects in the root folder")
 
 parsed_args = parser.parse_args(sys.argv[1:])
+try:
+    parsed_args.days = int(parsed_args.days)
+except:
+    parsed_args.days = None
 
 def filter(args, filepath):
     #Don't filter by subject because we are already filtering by subject in the main function
@@ -74,10 +78,10 @@ def main(args):
     output = createRecord(args)
     if args.sort:
         #Problem being you can only sort by one of the three options if also output the them
-        output.sort(key=lambda x: (
-            x.get("name", "") if "n" in args.sort else "",
-            x.get("subject", "") if "s" in args.sort else "",
-            x.get("time", 0) if "t" in args.sort else 0,
+        output["files"].sort(key=lambda x: (
+            x.get("name", "").lower() if "n" in args.sort else "",
+            x.get("subject", "").lower() if "s" in args.sort else "",
+            -x.get("time", 1) if "t" in args.sort else 0,
         ))
     return output
 
