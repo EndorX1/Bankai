@@ -26,6 +26,4 @@ dev/build/
 dev/dist/
 dev/spec/
 
-rclone.conf
-
 __pycache__
