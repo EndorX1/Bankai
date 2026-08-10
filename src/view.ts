@@ -13,6 +13,10 @@ const columns = [COL_NAME, COL_FOLDER, COL_SUBJECT, COL_DATE];
 export class TableView extends ItemView {
     private plugin: Bankai
     private struct: any = null;
+    static syncButton: HTMLButtonElement;
+    static syncSpinner: HTMLElement;
+    static syncTime: Date;
+
 
     constructor(leaf: WorkspaceLeaf, plugin: Bankai) {
         super(leaf);
@@ -43,6 +47,10 @@ export class TableView extends ItemView {
         const tbody = table.createEl('tbody');
         files.forEach((file: any) => {
             const tr = tbody.createEl('tr');
+            tr.addEventListener('click', () => {
+                navigator.clipboard.writeText(file.path ?? '');
+                new Notice('Copied path to clipboard');
+            });
             columns.forEach((column) => {
                 const td = tr.createEl('td');
                 let value = '';
@@ -58,7 +66,6 @@ export class TableView extends ItemView {
                 }
 
                 td.textContent = value;
-            //TODO add click eventlistener for copy path
             });
         });
         return table
@@ -109,7 +116,9 @@ export class TableView extends ItemView {
         return args
     }
 
-    async onOpen() {
+    public async onOpen() {
+        this.plugin.loadSettings()
+
         const vaultBasePath = (this.app.vault.adapter as any).basePath as string;
         const pluginId = this.plugin.manifest.id;
         const pluginPath = path.join(vaultBasePath, '.obsidian', 'plugins', pluginId);
@@ -136,6 +145,25 @@ export class TableView extends ItemView {
         const SubjectBtns: HTMLButtonElement[] = []
         let todayPressed = false
 
+        const rightDiv = contentEl.createEl('div', { cls: 'rightDiv' });
+
+        const syncContainer = rightDiv.createEl('div', { cls: 'syncContainer' });
+
+        const syncSpinner = syncContainer.createEl('div', { cls: 'spinner' });
+        syncSpinner.style.display = 'none'; // Initially hidden
+
+        const syncBtn = syncContainer.createEl('button', { text: 'Sync', cls: 'syncButton' });
+        TableView.syncButton = syncBtn;
+        TableView.syncSpinner = syncSpinner;
+        syncBtn.addEventListener('click', async () => {
+            await this.plugin.bankaiSync();
+        });
+
+        const reloadBtn = rightDiv.createEl('button', { text: 'Reload', cls: 'button' });
+			reloadBtn.addEventListener('click', () => this.reCreateTable(table));
+
+        const timeLabel = rightDiv.createEl('div', { text: `Last Synced: ${this.plugin.settings.syncTime.toLocaleString()}` });
+
         const controlsDiv = contentEl.createEl('div', { cls: 'butDiv' });
 
         const searchInput = controlsDiv.createEl('input', { cls: 'search' });
@@ -147,7 +175,7 @@ export class TableView extends ItemView {
                 });
 
         const buttonsDiv = controlsDiv.createEl('div', { cls: 'butDiv' });
-        
+
         const nameBtn = buttonsDiv.createEl('button', { text: 'Sort by Name', cls: 'button' });
         nameBtn.addEventListener('click', async () => {
             namePressed = !namePressed;

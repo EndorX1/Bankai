@@ -2,7 +2,7 @@
 	"id": "bankai",
 	"name": "Bankai",
 	"version": "1.0.0",
-	"minAppVersion": "0.0.1",
+	"minAppVersion": "1.0.0",
 	"description": "Sync Sharepoint files to Obsidian vault and lets you access them easily.",
 	"author": "Elia Constam",
 	"authorUrl": "https://constam.ch",
