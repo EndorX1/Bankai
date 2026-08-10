@@ -41,9 +41,7 @@ export class TableView extends ItemView {
             th.textContent = key as string;
         });
 
-        console.log("struct", this.struct);
         const files = Array.isArray(this.struct?.files) ? this.struct.files : [];
-        console.log("files", files);
         const tbody = table.createEl('tbody');
         files.forEach((file: any) => {
             const tr = tbody.createEl('tr');
@@ -157,10 +155,15 @@ export class TableView extends ItemView {
         TableView.syncSpinner = syncSpinner;
         syncBtn.addEventListener('click', async () => {
             await this.plugin.bankaiSync();
+            this.struct = await this.pullPythonData(scriptBin, this.mngArgs(targetDir, searchInput.value, namePressed, subjectPressed, timePressed, SubjectF, DaysF));
+            this.reCreateTable(table)
         });
 
         const reloadBtn = rightDiv.createEl('button', { text: 'Reload', cls: 'button' });
-			reloadBtn.addEventListener('click', () => this.reCreateTable(table));
+		reloadBtn.addEventListener('click', async () => {
+            this.struct = await this.pullPythonData(scriptBin, this.mngArgs(targetDir, searchInput.value, namePressed, subjectPressed, timePressed, SubjectF, DaysF));
+            this.reCreateTable(table)
+        });
 
         const timeLabel = rightDiv.createEl('div', { text: `Last Synced: ${this.plugin.settings.syncTime.toLocaleString()}` });
 
