@@ -21,6 +21,7 @@ import {
 } from 'child_process';
 import * as path from 'path';
 import { TableView, VIEW_TYPE } from './view';
+import { time } from 'console';
 
 export class InputConfidentialData extends Modal {
     private adminPassword = "";
@@ -152,7 +153,16 @@ export default class Bankai extends Plugin {
 	}
 
     async updateButtonIsSyncing(running: boolean) {
-        new Notice('Bankai Button Under Construction');
+        if (running) {
+            TableView.syncButton.textContent = 'Syncing...';
+			TableView.syncButton.disabled = true;
+			TableView.syncSpinner.style.display = 'inline-block';
+        }
+        else {
+            TableView.syncButton.textContent = 'Sync';
+            TableView.syncButton.disabled = false;
+            TableView.syncSpinner.style.display = 'none';
+        }
     }
 
     async processErrorHandling(
@@ -211,8 +221,10 @@ export default class Bankai extends Plugin {
     }
 
     async bankaiSync() {
+        TableView.syncTime = new Date();
+        this.saveData(this.settings.syncTime);
         new Notice('Syncing...');
-        this.stopTimer
+        this.stopTimer()
 
         const vaultBasePath = (this.app.vault.adapter as any).basePath as string;
         const pluginId = this.manifest.id;
@@ -241,16 +253,22 @@ export default class Bankai extends Plugin {
             },
             onError: (err) => {
                 this.updateButtonIsSyncing(false);
+                this.settings.syncTime = new Date();
+                this.saveSettings();
             },
             onClose: (code) => {
                 this.startTimer();
                 this.updateButtonIsSyncing(false);
+                this.settings.syncTime = new Date();
+                this.saveSettings();
             },
             onFail: (code) => {
                 new Notice(`Process failed. Exit Code: ${code}. Check Console.`);
             },
             onConFail: (msg) => {
                 this.updateButtonIsSyncing(false);
+                this.settings.syncTime = new Date();
+                this.saveSettings();
             }
         }
         )

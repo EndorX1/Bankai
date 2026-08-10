@@ -6,6 +6,7 @@ export interface BankaiSettings {
 	DownloadDirectory: string;
 	PluginEnabled: boolean;
 	SetupMode: string;
+	syncTime: Date;
 }
 
 export const DEFAULT_SETTINGS: BankaiSettings = {
@@ -13,6 +14,7 @@ export const DEFAULT_SETTINGS: BankaiSettings = {
 	DownloadDirectory: '',
 	PluginEnabled: false,
 	SetupMode: '0',
+	syncTime: new Date(0),
 };
 
 export class BankaiSettingTab extends PluginSettingTab {
