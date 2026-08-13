@@ -178,6 +178,7 @@ export default class Bankai extends Plugin {
             onConFail?: (msg: unknown) => void;
         } = {}
     ): Promise<void> {
+        let rawData = '';
         try {
             const subprocess = spawn(scriptBin, args);
 
@@ -194,9 +195,12 @@ export default class Bankai extends Plugin {
             });
 
             subprocess.stdout?.on('data', (data: Buffer) => {
-                const msg = data.toString();
-                console.log(`[Bankai] Stdout(${scriptBin}): ${msg}`);
-                if (callbacks.onStdout) callbacks.onStdout(msg);
+                rawData += data.toString();
+                subprocess.stdout.on('end', () => {
+                    const msg = rawData;
+                    console.log(`[Bankai] Stdout(${scriptBin}): ${msg}`);
+                    if (callbacks.onStdout) callbacks.onStdout(msg);
+                });
             });
 
             subprocess.on('close', (codeNumber: number) => {
