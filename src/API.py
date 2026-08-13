@@ -45,9 +45,9 @@ def createRecord(args):
     subjects = os.listdir(args.root)
     if args.subjects:
         output["subjects"] = subjects
-    subject_dirs = {os.path.join(args.root, subs) for subs in subjects}
+    subject_dirs = [os.path.join(args.root, subs) for subs in subjects]
+    subject = ""
     for root, dirs, files in os.walk(os.path.join(args.root, args.subject), topdown=True):
-        subject = ""
         if root in subject_dirs:
             subject = os.path.basename(root)
         for file in files:

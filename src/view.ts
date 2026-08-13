@@ -39,6 +39,18 @@ export class TableView extends ItemView {
         columns.forEach((key) => {
             const th = headerRow.createEl('th');
             th.textContent = key as string;
+
+            if (key === COL_NAME) {
+            th.style.width = '100px';       // Set your desired width
+            th.style.whiteSpace = 'normal';  // Allows text wrapping
+            th.style.wordBreak = 'break-word';
+            }
+
+            else if (key === COL_FOLDER) {
+                th.style.width = '200px';       // Set your desired width
+                th.style.whiteSpace = 'normal';  // Allows text wrapping
+                th.style.wordBreak = 'break-word';
+            }
         });
 
         const files = Array.isArray(this.struct?.files) ? this.struct.files : [];
@@ -259,7 +271,7 @@ export class TableView extends ItemView {
             todayPressed = !todayPressed;
             todayBtn.style.backgroundColor = todayPressed ? '#4caf50' : '';
             todayBtn.style.color = todayPressed ? 'white' : '';
-            DaysF = 1
+            DaysF = +todayPressed;
             this.struct = await this.pullPythonData(scriptBin, this.mngArgs(targetDir, searchInput.value, namePressed, subjectPressed, timePressed, SubjectF, DaysF));
             this.reCreateTable(table)
             });
