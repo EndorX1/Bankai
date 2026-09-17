@@ -237,7 +237,9 @@ def BrowserCookie():
 
         if os.path.isfile(chromium_cookies):
             print("Fetching cookies from Chromium database...")
-            rtFa = get_cookies("https://sharepoint.com", browser=getattr(BrowserType, browserStrings[bs]), cookie_file=chromium_cookies)["rtFa"]
+            rtFa = get_cookies(f"https://{tenant}-my.sharepoint.com", browser=getattr(BrowserType, browserStrings[bs]), cookie_file=chromium_cookies)
+            print(rtFa)
+            rtFa = rtFa["rtFa"]
             FedAuth = get_cookies(f"https://{tenant}-my.sharepoint.com", browser=getattr(BrowserType, browserStrings[bs]),cookie_file=chromium_cookies)["FedAuth"]
         
 

@@ -10,6 +10,7 @@
 		"typecheck": "tsc --noEmit --skipLibCheck",
 		"build": "node esbuild.config.mjs production",
 		"copy:linux": "mkdir -p ../TestVault/.obsidian/plugins/bankai && cp main.js manifest.json styles.css ./dev/build/dist/linux/bankai-api ./dev/build/dist/linux/bankai-init ./dev/build/dist/linux/bankai-sync ../TestVault/.obsidian/plugins/bankai/",
+		"py:linux": "cd .. && ./venv/bin/pyinstaller --onefile --name bankai-init --distpath Bankai/dev/build/dist/linux --workpath Bankai/dev/build/build/setup --specpath Bankai/dev/spec/api Bankai/src/rcloneConf.py && cd Bankai",
 		"test:linux": "npm run build && npm run copy:linux",
 		"clean": "rm -f main.js",
 		"version": "node version-bump.mjs && git add manifest.json versions.json",
