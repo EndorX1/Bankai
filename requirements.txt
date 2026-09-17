@@ -1,0 +1,2 @@
+pycookiecheat==0.8.0
+cryptographie==43
